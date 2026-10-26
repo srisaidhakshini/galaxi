@@ -1,0 +1,173 @@
+import express from "express";
+import { randomBytes, timingSafeEqual } from "node:crypto";
+import { resolve } from "node:path";
+import { z } from "zod";
+import { Store } from "./store.ts";
+import { Controller } from "./controller.ts";
+const port = Number(process.env.PORT || 4310),
+  origin = `http://127.0.0.1:${port}`;
+const store = new Store(
+  resolve(process.env.CITY_DATA_DIR || ".local", "city.sqlite"),
+);
+const controller = new Controller(store);
+const app = express();
+const sessions = new Set<string>();
+app.use((req, res, next) => {
+  if (!["127.0.0.1", `127.0.0.1:${port}`].includes(req.headers.host || ""))
+    return res.status(403).json({ error: "Invalid host" });
+  if (req.headers.origin && req.headers.origin !== origin)
+    return res.status(403).json({ error: "Invalid origin" });
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  next();
+});
+app.use(express.json({ limit: "64kb" }));
+app.get("/api/session", (req, res) => {
+  if (req.headers["sec-fetch-site"] === "cross-site")
+    return res.sendStatus(403);
+  const token = randomBytes(32).toString("hex");
+  if (sessions.size > 100) sessions.clear();
+  sessions.add(token);
+  res.cookie("city_session", token, {
+    httpOnly: true,
+    sameSite: "strict",
+    path: "/",
+  });
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ token });
+});
+app.use("/api", (req, res, next) => {
+  const cookie = String(req.headers.cookie || "").match(
+    /(?:^|; )city_session=([a-f0-9]{64})/,
+  )?.[1];
+  const token = String(req.headers["x-city-session"] || "");
+  if (!cookie || !sessions.has(cookie))
+    return res
+      .status(401)
+      .json({ error: "Reload to establish a local session" });
+  if (
+    req.method !== "GET" &&
+    (token.length !== cookie.length ||
+      !timingSafeEqual(Buffer.from(token), Buffer.from(cookie)))
+  )
+    return res.status(403).json({ error: "Invalid local session token" });
+  res.setHeader("Cache-Control", "no-store");
+  next();
+});
+app.get("/api/state", (req, res) =>
+  res.json(store.snapshot(Number(req.query.after) || 0)),
+);
+app.get("/api/events", (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.flushHeaders();
+  const notify = () => res.write("event: update\ndata: {}\n\n");
+  controller.listeners.add(notify);
+  const timer = setInterval(() => res.write(": keepalive\n\n"), 15000);
+  req.on("close", () => {
+    clearInterval(timer);
+    controller.listeners.delete(notify);
+  });
+  notify();
+});
+const route =
+  (fn: (req: express.Request) => Promise<unknown>) =>
+  async (req: express.Request, res: express.Response) => {
+    try {
+      res.json((await fn(req)) ?? { ok: true });
+    } catch (e) {
+      res
+        .status(400)
+        .json({ error: e instanceof Error ? e.message : String(e) });
+    }
+  };
+app.post(
+  "/api/runtime/reconnect",
+  route(async () => {
+    await controller.connect();
+    return store.state.runtime;
+  }),
+);
+app.post(
+  "/api/projects",
+  route(async (req) => {
+    const b = z
+      .object({
+        path: z.string().min(1).max(4096),
+        name: z.string().max(100).optional(),
+        checks: z.array(z.string().min(1).max(2000)).min(1).max(12).optional(),
+      })
+      .parse(req.body);
+    return controller.addProject(b.path, b.name, b.checks);
+  }),
+);
+app.post(
+  "/api/tasks",
+  route(async (req) => {
+    const b = z
+      .object({
+        projectId: z.string().uuid(),
+        prompt: z.string().min(1).max(30000),
+        concurrency: z.number().int().min(1).max(2).default(2),
+        attemptOf: z.string().uuid().optional(),
+      })
+      .parse(req.body);
+    return controller.start(b.projectId, b.prompt, b.concurrency, b.attemptOf);
+  }),
+);
+app.post(
+  "/api/tasks/:id/cancel",
+  route(async (req) => controller.cancel(String(req.params.id))),
+);
+app.post(
+  "/api/tasks/:id/steer",
+  route(async (req) => {
+    const b = z
+      .object({ workerId: z.string(), text: z.string().min(1).max(20000) })
+      .parse(req.body);
+    return controller.steer(String(req.params.id), b.workerId, b.text);
+  }),
+);
+app.post(
+  "/api/tasks/:id/apply",
+  route(async (req) => controller.apply(String(req.params.id))),
+);
+app.post(
+  "/api/requests/:id",
+  route(async (req) =>
+    controller.answer(
+      String(req.params.id),
+      z
+        .object({
+          decision: z.enum(["accept", "decline", "cancel"]).optional(),
+          answers: z.record(z.string(), z.array(z.string())).optional(),
+        })
+        .parse(req.body),
+    ),
+  ),
+);
+if (process.argv.includes("--production")) {
+  app.use(express.static(resolve("dist")));
+  app.get("/{*path}", (req, res) => res.sendFile(resolve("dist/index.html")));
+} else {
+  const { createServer } = await import("vite");
+  const vite = await createServer({
+    server: { middlewareMode: true },
+    appType: "spa",
+  });
+  app.use(vite.middlewares);
+}
+const server = app.listen(port, "127.0.0.1", () => {
+  console.log(`Codex City: ${origin}`);
+  void controller.connect();
+});
+async function shutdown() {
+  for (const t of store.state.tasks)
+    if (!["succeeded", "failed", "cancelled", "interrupted"].includes(t.status))
+      await controller.cancel(t.id, "interrupted");
+  controller.runtime.close();
+  server.close();
+  process.exit();
+}
+process.once("SIGINT", shutdown);
+process.once("SIGTERM", shutdown);
