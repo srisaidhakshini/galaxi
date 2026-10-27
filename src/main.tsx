@@ -151,7 +151,7 @@ function App() {
     localStorage.getItem("city-simple") === "true",
   );
   const [motion, setMotion] = useState(
-    !matchMedia("(prefers-reduced-motion: reduce)").matches,
+    localStorage.getItem("city-motion") !== "reduced",
   );
   const [reset, setReset] = useState(0);
   const [pan, setPan] = useState(true);
@@ -577,7 +577,13 @@ function App() {
                 <input
                   type="checkbox"
                   checked={!motion}
-                  onChange={(e) => setMotion(!e.target.checked)}
+                  onChange={(e) => {
+                    setMotion(!e.target.checked);
+                    localStorage.setItem(
+                      "city-motion",
+                      e.target.checked ? "reduced" : "animated",
+                    );
+                  }}
                 />{" "}
                 Reduced motion
               </label>

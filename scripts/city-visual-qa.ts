@@ -61,6 +61,7 @@ try {
     "editing",
     "running commands",
     "waiting for approval",
+    "completed",
   ].map((status, i) => ({
     id: "fixture-worker-" + i,
     threadId: "visual-only-" + i,
@@ -106,17 +107,27 @@ try {
   await page.route("**/api/state*", (r) => r.fulfill({ json: state }));
   await page.reload();
   await expect(page.locator(".plot-label")).toHaveCount(5);
-  await expect(page.locator(".worker-state")).toHaveCount(3);
+  await expect(page.locator(".worker-state")).toHaveCount(4);
   await page.waitForTimeout(1500);
-  const mover = page
-    .locator(".worker-state")
-    .filter({ hasText: "running commands" });
+  const mover = page.locator(".worker-state").filter({ hasText: "editing" });
+  const offDuty = page.locator('.worker-state[data-state="completed"]');
+  const offBefore = await offDuty.boundingBox();
   const before = await mover.boundingBox();
   await page.waitForTimeout(1300);
   const after = await mover.boundingBox();
+  const offAfter = await offDuty.boundingBox();
   expect(
-    Math.abs(before!.x - after!.x) + Math.abs(before!.y - after!.y),
+    Math.hypot(offBefore!.x - offAfter!.x, offBefore!.y - offAfter!.y),
   ).toBeGreaterThan(2);
+  await expect
+    .poll(
+      async () => {
+        const now = await mover.boundingBox();
+        return Math.abs(before!.x - now!.x) + Math.abs(before!.y - now!.y);
+      },
+      { timeout: 14000 },
+    )
+    .toBeGreaterThan(2);
   await page.screenshot({
     path: ".local/city-redesign-active-fixture.png",
     fullPage: true,

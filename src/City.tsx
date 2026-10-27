@@ -8,7 +8,7 @@ import React, {
   useContext,
 } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { OrbitControls, ContactShadows, Html } from "@react-three/drei";
+import { OrbitControls, Html } from "@react-three/drei";
 import * as THREE from "three";
 import { workerPose } from "./workerMotion";
 import {
@@ -141,7 +141,7 @@ function Person({
     const dx = pose.x - root.current.position.x,
       dz = pose.z - root.current.position.z,
       distance = Math.hypot(dx, dz);
-    const walking = motion && distance > 0.035;
+    const walking = motion && distance > 0.001;
     if (
       motion &&
       distance > 0.1 &&
@@ -150,7 +150,10 @@ function Person({
       )
     )
       age.current = Math.max(0, age.current - delta);
-    const step = Math.min(distance, delta * (pose.carrying ? 0.72 : 0.9));
+    const step = Math.min(
+      distance,
+      delta * (pose.carrying ? 1.05 : pose.action === "strolling" ? 0.7 : 1.65),
+    );
     if (motion && distance > 0.001) {
       root.current.position.x += (dx / distance) * step;
       root.current.position.z += (dz / distance) * step;
@@ -166,7 +169,7 @@ function Person({
     if (walking) gait.current += step * 12;
     const t = age.current,
       phase = gait.current,
-      stride = walking ? Math.sin(phase) * 0.62 : 0;
+      stride = walking ? Math.sin(phase) * (pose.carrying ? 0.58 : 0.8) : 0;
     const doing = motion && !walking,
       working = doing && pose.action === "hammering";
     const bend =
@@ -497,29 +500,35 @@ function Streetscape({ rows, motion }: { rows: number; motion: boolean }) {
   const depth = Math.max(21, rows * 5.7 + 9);
   return (
     <>
-      <Box at={[0, -0.8, 2]} size={[29, 1.5, depth]} color="#8493c2" />
-      <Box at={[0, -0.03, 2]} size={[29, 0.1, depth]} color="#a9c9c0" />
-      <Box at={[12.15, 0.06, 2]} size={[2.7, 0.06, depth]} color="#52b5df" />
-      {[0, 1, 2].map((i) => (
-        <Box
-          key={i}
-          at={[11.4 + i * 0.6, 0.1, 2]}
-          size={[0.035, 0.02, depth]}
-          color="#8cd7ed"
-        />
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[0, -0.08, 0]}
+        receiveShadow
+      >
+        <planeGeometry args={[2000, 2000]} />
+        <meshStandardMaterial color="#b8cfbc" roughness={1} />
+      </mesh>
+      {[-22, -16, 16, 22].map((x) => (
+        <group key={x}>
+          <Tree x={x} z={-10} color="#9aace0" />
+          <Tree x={x + 2} z={14} color="#e6b476" />
+          <Tree x={x - 1} z={22} color="#79b9a5" />
+        </group>
       ))}
-      <Box at={[10.55, 0.12, 2]} size={[0.6, 0.12, depth]} color="#d9a582" />
+      <Box at={[0, 0.035, -11.4]} size={[100, 0.06, 1.1]} color="#74839e" />
+      <Box at={[-16, 0.035, 10]} size={[1.1, 0.06, 100]} color="#74839e" />
+      <Box at={[16, 0.035, 10]} size={[1.1, 0.06, 100]} color="#74839e" />
       {Array.from({ length: rows + 1 }, (_, i) => i * 5.7 - 5.7).map((z) => (
         <group key={z}>
-          <Box at={[-0.4, 0.045, z]} size={[22, 0.08, 1.2]} color="#74839e" />
+          <Box at={[-0.4, 0.045, z]} size={[60, 0.08, 1.2]} color="#74839e" />
           <Box
             at={[-0.4, 0.09, z - 0.68]}
-            size={[22, 0.07, 0.18]}
+            size={[60, 0.07, 0.18]}
             color="#d3d8ec"
           />
           <Box
             at={[-0.4, 0.09, z + 0.68]}
-            size={[22, 0.07, 0.18]}
+            size={[60, 0.07, 0.18]}
             color="#d3d8ec"
           />
           {[-9, -6, -3, 3, 6, 9].map((x) => (
@@ -530,10 +539,9 @@ function Streetscape({ rows, motion }: { rows: number; motion: boolean }) {
               color="#ffe7a7"
             />
           ))}
-          <Box at={[12, 0.17, z]} size={[3.5, 0.17, 1.05]} color="#e2b18b" />
         </group>
       ))}
-      <Box at={[0, 0.06, 2]} size={[1, 0.08, depth]} color="#74839e" />
+      <Box at={[0, 0.06, 2]} size={[1, 0.08, 100]} color="#74839e" />
       <Fountain motion={motion} />
       {Array.from({ length: rows * 4 + 8 }, (_, i) => (
         <Tree
@@ -729,9 +737,13 @@ function Building({
       </group>
       {busy && (
         <group>
-          <Box at={[-1.65, 0.3, 1.5]} size={[0.5, 0.4, 0.55]} color="#d58b68" />
           <Box
-            at={[-1.65, 0.55, 1.5]}
+            at={[-3.15, 0.3, 2.15]}
+            size={[0.5, 0.4, 0.55]}
+            color="#d58b68"
+          />
+          <Box
+            at={[-3.15, 0.55, 2.15]}
             size={[0.4, 0.12, 0.4]}
             color="#f4b481"
           />
@@ -939,8 +951,8 @@ export default function City({
                 camera={{ position: [17, 19, 22], fov: 40 }}
                 gl={{ antialias: true }}
               >
-                <color attach="background" args={["#dce7fa"]} />
-                <fog attach="fog" args={["#dce7fa", 45, 100]} />
+                <color attach="background" args={["#b8cfbc"]} />
+                <fog attach="fog" args={["#b8cfbc", 48, 110]} />
                 <ambientLight intensity={0.7} />
                 <hemisphereLight args={["#dceaff", "#bca1b7", 0.8]} />
                 <directionalLight
@@ -976,15 +988,9 @@ export default function City({
                       ) : (
                         <group key={i} position={plotPosition(i)}>
                           <Box
-                            at={[0, 0.09, 0]}
-                            size={[4.25, 0.1, 4.35]}
-                            color={
-                              i % 3 === 0
-                                ? "#c8d4ea"
-                                : i % 3 === 1
-                                  ? "#b8d5cc"
-                                  : "#ddcce4"
-                            }
+                            at={[0, -0.015, 0]}
+                            size={[4.25, 0.025, 4.35]}
+                            color={i % 2 ? "#b4cbb8" : "#bed3be"}
                           />
                           {i === 0 && (
                             <>
@@ -1009,14 +1015,6 @@ export default function City({
                       ),
                   )}
                 </group>
-                <ContactShadows
-                  position={[0, -0.09, 0]}
-                  opacity={0.18}
-                  scale={45}
-                  blur={2.5}
-                  far={12}
-                  resolution={256}
-                />
                 <Camera
                   focus={focus}
                   reset={reset}

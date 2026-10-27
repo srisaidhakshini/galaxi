@@ -1,5 +1,6 @@
 import type { Worker } from "../shared/domain";
 export type WorkerAction =
+  | "strolling"
   | "walking"
   | "pickup"
   | "carrying"
@@ -26,7 +27,7 @@ export function workerPose(
   index: number,
 ): Pose {
   const offset = index * 0.18,
-    supply: [number, number] = [-1.65 + offset, 1.6],
+    supply: [number, number] = [-3.15 + offset, 2.15],
     station: [number, number] = [1.45 - offset, 1.6];
   const resting = {
     x: -1.6 + (index % 5) * 0.75,
@@ -38,7 +39,18 @@ export function workerPose(
   };
   if (status.includes("waiting") || status === "blocked")
     return { ...resting, action: "waiting" };
-  if (["completed", "interrupted", "failed", "queued", "idle"].includes(status))
+  if (status === "completed") {
+    const t = (elapsed + index * 3.5) * 0.3;
+    return {
+      x: Math.sin(t) * 2.05,
+      z: 2.85 + Math.cos(t) * 0.32,
+      heading: Math.atan2(Math.cos(t) * 2.05, -Math.sin(t) * 0.32),
+      action: "strolling",
+      progress: (t % (Math.PI * 2)) / (Math.PI * 2),
+      carrying: false,
+    };
+  }
+  if (["interrupted", "failed", "queued", "idle"].includes(status))
     return resting;
   if (status === "editing") {
     const t = elapsed % 18;
@@ -54,7 +66,9 @@ export function workerPose(
     if (t < 7.3)
       return {
         x: mix(supply[0], station[0], (t - 1.8) / 5.5),
-        z: 1.7 + Math.sin(((t - 1.8) / 5.5) * Math.PI) * 0.55,
+        z:
+          mix(supply[1], station[1], (t - 1.8) / 5.5) +
+          Math.sin(((t - 1.8) / 5.5) * Math.PI) * 0.55,
         heading: Math.PI / 2,
         action: "carrying",
         progress: (t - 1.8) / 5.5,
@@ -80,7 +94,9 @@ export function workerPose(
       };
     return {
       x: mix(station[0], supply[0], (t - 12.8) / 5.2),
-      z: 1.7 + Math.sin(((t - 12.8) / 5.2) * Math.PI) * 0.65,
+      z:
+        mix(station[1], supply[1], (t - 12.8) / 5.2) +
+        Math.sin(((t - 12.8) / 5.2) * Math.PI) * 0.65,
       heading: -Math.PI / 2,
       action: "walking",
       progress: (t - 12.8) / 5.2,
@@ -101,8 +117,8 @@ export function workerPose(
   }
   const travel = (t / 14) * Math.PI * 2;
   return {
-    x: Math.sin(travel) * 1.7,
-    z: 2.05 + Math.cos(travel) * 0.35,
+    x: Math.sin(travel) * 2.7,
+    z: 2.3 + Math.cos(travel) * 0.45,
     heading: Math.atan2(Math.cos(travel) * 1.7, -Math.sin(travel) * 0.35),
     action: "inspecting",
     progress: t / 14,
