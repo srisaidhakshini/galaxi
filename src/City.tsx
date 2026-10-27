@@ -17,6 +17,7 @@ import {
   type Project,
   type Task,
   type Worker,
+  type ObservedChat,
 } from "../shared/domain";
 const LabelPortal = createContext<React.RefObject<HTMLDivElement> | undefined>(
   undefined,
@@ -86,11 +87,15 @@ function Person({
   index,
   onClick,
   motion,
+  onPlacement,
+  placedBricks = 0,
 }: {
   worker: Worker;
   index: number;
   onClick: () => void;
   motion: boolean;
+  onPlacement?: () => void;
+  placedBricks?: number;
 }) {
   const root = useRef<THREE.Group>(null),
     body = useRef<THREE.Group>(null),
@@ -110,6 +115,8 @@ function Person({
   const age = useRef(index * 2.3),
     gait = useRef(index * 1.7),
     previousStatus = useRef(worker.status),
+    previousItem = useRef(worker.observedItemId),
+    placedCycle = useRef(-1),
     action = useRef("resting"),
     badge = useRef<HTMLButtonElement>(null);
   const waiting =
@@ -132,8 +139,13 @@ function Person({
   useFrame((_, dt) => {
     if (!root.current || !body.current) return;
     const delta = Math.min(dt, 0.05);
-    if (previousStatus.current !== worker.status) {
+    if (
+      previousStatus.current !== worker.status ||
+      previousItem.current !== worker.observedItemId
+    ) {
       previousStatus.current = worker.status;
+      previousItem.current = worker.observedItemId;
+      placedCycle.current = -1;
       age.current = index * 2.3;
     }
     if (motion) age.current += delta;
@@ -172,6 +184,15 @@ function Person({
       stride = walking ? Math.sin(phase) * (pose.carrying ? 0.58 : 0.8) : 0;
     const doing = motion && !walking,
       working = doing && pose.action === "hammering";
+    if (
+      doing &&
+      pose.action === "placing" &&
+      pose.progress > 0.6 &&
+      placedCycle.current !== Math.floor(age.current / 18)
+    ) {
+      placedCycle.current = Math.floor(age.current / 18);
+      onPlacement?.();
+    }
     const bend =
       doing && (pose.action === "pickup" || pose.action === "placing")
         ? Math.sin(pose.progress * Math.PI) * 0.65
@@ -429,6 +450,7 @@ function Person({
           className={`worker-state ${waiting ? "attention" : ""}`}
           data-state={worker.status}
           data-action="resting"
+          data-placed-bricks={placedBricks}
           aria-label={`${worker.id}: ${worker.status}`}
           title={`${worker.id}: ${worker.status} — ${worker.latest}`}
           onClick={onClick}
@@ -597,6 +619,7 @@ function Building({
   onSelect,
   onWorker,
   motion,
+  observed = [],
 }: {
   project: Project;
   task?: Task;
@@ -604,12 +627,26 @@ function Building({
   onSelect: () => void;
   onWorker: (w: Worker) => void;
   motion: boolean;
+  observed?: ObservedChat[];
 }) {
   const [hover, setHover] = useState(false);
+  const [bricks, setBricks] = useState<Record<string, number>>({});
+  const sessionKey = task?.id || observed.map((c) => c.prompt).join("|");
+  useEffect(() => setBricks({}), [sessionKey]);
   const l = level(project.successes),
     color = palette[project.plot % palette.length],
     height = 0.85 + (l - 1) * 0.55;
-  const busy = task && !terminal(task.status);
+  const workers = [
+    ...(task?.workers || []),
+    ...observed.map((c) => c.worker),
+  ].filter((w) => w.threadId);
+  const busy =
+    !!(task && !terminal(task.status)) ||
+    observed.some((c) =>
+      ["editing", "checking", "running commands", "inspecting"].includes(
+        c.worker.status,
+      ),
+    );
   return (
     <group position={plotPosition(project.plot)}>
       <group
@@ -730,7 +767,8 @@ function Building({
           >
             {project.name}
             <span>
-              LV {l} {busy ? " • WORKING" : ""}
+              LV {l}{" "}
+              {observed.length ? " • WATCHING CODEX" : busy ? " • WORKING" : ""}
             </span>
           </button>
         </Label>
@@ -762,17 +800,31 @@ function Building({
           ))}
         </group>
       )}
-      {task?.workers
-        .filter((w) => w.threadId)
-        .map((w, i) => (
-          <Person
-            key={w.id}
-            worker={w}
-            index={i}
-            onClick={() => onWorker(w)}
-            motion={motion}
-          />
-        ))}
+      {Object.entries(bricks).map(([id, count], workerIndex) => (
+        <group key={id} position={[1.1 - workerIndex * 0.48, 0.2, 1.15]}>
+          {Array.from({ length: Math.min(count, 12) }, (_, i) => (
+            <Box
+              key={i}
+              at={[(i % 3) * 0.23, Math.floor(i / 3) * 0.15, 0]}
+              size={[0.22, 0.14, 0.18]}
+              color={i % 2 ? "#da8d69" : "#e8a27b"}
+            />
+          ))}
+        </group>
+      ))}
+      {workers.map((w, i) => (
+        <Person
+          key={w.id}
+          worker={w}
+          index={i}
+          onClick={() => onWorker(w)}
+          motion={motion}
+          onPlacement={() =>
+            setBricks((prev) => ({ ...prev, [w.id]: (prev[w.id] || 0) + 1 }))
+          }
+          placedBricks={bricks[w.id] || 0}
+        />
+      ))}
     </group>
   );
 }
@@ -891,6 +943,7 @@ export default function City({
   onFail,
   cameraCommand,
   pan,
+  observedChats = [],
 }: {
   projects: Project[];
   tasks: Task[];
@@ -904,6 +957,7 @@ export default function City({
   onFail: () => void;
   cameraCommand?: CameraCommand;
   pan: boolean;
+  observedChats?: ObservedChat[];
 }) {
   const labels = useRef<HTMLDivElement>(null!);
   const simpleView = (
@@ -984,6 +1038,9 @@ export default function City({
                           onSelect={() => onSelect(projects[i].id)}
                           onWorker={onWorker}
                           motion={motion}
+                          observed={observedChats.filter(
+                            (c) => c.projectId === projects[i].id,
+                          )}
                         />
                       ) : (
                         <group key={i} position={plotPosition(i)}>

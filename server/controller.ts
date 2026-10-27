@@ -152,6 +152,10 @@ export class Controller {
       );
     const p = this.store.state.projects.find((p) => p.id === projectId);
     if (!p) throw new Error("Unknown project");
+    if (!p.checks.length)
+      throw new Error(
+        "This project is watch-only. Register required verification commands before starting City execution.",
+      );
     if (
       this.starting.has(p.id) ||
       this.store.state.tasks.some(

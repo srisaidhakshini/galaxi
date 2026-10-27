@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import City, { type CameraCommand } from "./City";
+import { WatchDialog, WatchedChat } from "./WatchedChat";
 import {
   level,
   terminal,
@@ -144,6 +145,8 @@ function App() {
   const [tab, setTab] = useState("Chat");
   const [taskId, setTaskId] = useState("");
   const [adding, setAdding] = useState(false);
+  const [watchPicker, setWatchPicker] = useState(false);
+  const [cityExecution, setCityExecution] = useState(false);
   const [search, setSearch] = useState("");
   const [prompt, setPrompt] = useState("");
   const [busy, setBusy] = useState(false);
@@ -212,19 +215,24 @@ function App() {
     setApplyConfirm(false);
   }, [selected]);
   const worker = inspectedWorker
-    ? state?.tasks
-        .flatMap((t) => t.workers)
-        .find(
-          (w) =>
-            w.workspace === inspectedWorker.workspace &&
-            w.id === inspectedWorker.id,
-        ) || inspectedWorker
+    ? [
+        ...(state?.tasks.flatMap((t) => t.workers) || []),
+        ...(state?.observedChats?.map((c) => c.worker) || []),
+      ].find(
+        (w) =>
+          w.workspace === inspectedWorker.workspace &&
+          w.id === inspectedWorker.id,
+      ) || inspectedWorker
     : undefined;
   const projects = state?.projects || [],
     tasks = state?.tasks || [],
     project = projects.find((p) => p.id === selected),
     projectTasks = tasks.filter((t) => t.projectId === selected);
   const task = projectTasks.find((t) => t.id === taskId) || projectTasks.at(-1);
+  const observed = state?.observedChats
+    ?.filter((c) => c.projectId === selected)
+    .at(-1);
+  const watching = !!observed && !cityExecution;
   const active = projectTasks.find((t) => !terminal(t.status));
   const events = (state?.events || []).filter((e) => e.taskId === task?.id);
   const requests = state?.requests.filter((r) => r.taskId === task?.id) || [];
@@ -242,6 +250,7 @@ function App() {
     }
   }
   function select(id: string) {
+    setCityExecution(false);
     setTaskId("");
     setWorker(undefined);
     setApplyConfirm(false);
@@ -263,10 +272,14 @@ function App() {
       if (r.id) setTaskId(r.id);
     }
   }
-  const activeWorkers = tasks
-    .filter((t) => !terminal(t.status))
-    .flatMap((t) => t.workers)
-    .filter((w) => w.threadId).length;
+  const activeWorkers =
+    tasks
+      .filter((t) => !terminal(t.status))
+      .flatMap((t) => t.workers)
+      .filter((w) => w.threadId).length +
+    (state?.observedChats?.filter(
+      (c) => !["idle", "completed", "blocked"].includes(c.worker.status),
+    ).length || 0);
   return (
     <div className="app">
       <aside className="sidebar">
@@ -461,6 +474,24 @@ function App() {
             ! A worker needs your response. Open project →
           </button>
         )}
+        {!!state?.observedChats?.length && (
+          <button
+            className="watch-linkbar"
+            onClick={() => {
+              const c = state.observedChats!.at(-1)!;
+              const p = projects.find((p) => p.id === c.projectId);
+              select(c.projectId);
+              if (p) {
+                setFocus(p.plot);
+                setReset((x) => x + 1);
+              }
+            }}
+          >
+            ◉ Watching your Codex chat{" "}
+            <span>{state.observedChats.at(-1)!.name}</span>
+            <strong>View work in the city →</strong>
+          </button>
+        )}
         <section className={`city-shell ${project ? "with-panel" : ""}`}>
           <div className="world">
             <div className="world-top">
@@ -503,6 +534,7 @@ function App() {
               onFail={() => setSimple(true)}
               pan={pan}
               cameraCommand={cameraCommand}
+              observedChats={state?.observedChats}
             />
             {!projects.length && (
               <div className="city-welcome">
@@ -606,6 +638,9 @@ function App() {
                 </div>
                 <p title={project.path}>{project.path}</p>
                 <div className="button-row">
+                  <button onClick={() => setWatchPicker(true)}>
+                    ◉ Watch Codex chat
+                  </button>
                   <button
                     onClick={() => {
                       setFocus(project.plot);
@@ -625,6 +660,22 @@ function App() {
                   </button>
                 </div>
               </div>
+              {observed && (
+                <div className="watch-mode">
+                  <button
+                    aria-pressed={watching}
+                    onClick={() => setCityExecution(false)}
+                  >
+                    Watch Codex
+                  </button>
+                  <button
+                    aria-pressed={!watching}
+                    onClick={() => setCityExecution(true)}
+                  >
+                    Separate City task
+                  </button>
+                </div>
+              )}
               <div className="tabs" role="tablist">
                 {["Chat", "Activity", "Changes", "Checks", "History"].map(
                   (t) => (
@@ -644,10 +695,13 @@ function App() {
                 )}
               </div>
               <div className="panel-content">
+                {watching && observed && (
+                  <WatchedChat chat={observed} tab={tab} />
+                )}
                 {requests.map((r) => (
                   <RequestCard key={r.id} request={r} send={send} />
                 ))}
-                {task && (
+                {task && !watching && (
                   <div className="task-summary">
                     <Badge status={task.status} />
                     <span>
@@ -662,7 +716,7 @@ function App() {
                     )}
                   </div>
                 )}
-                {tab === "Chat" && (
+                {!watching && tab === "Chat" && (
                   <>
                     {!task && (
                       <div className="panel-empty">
@@ -718,7 +772,7 @@ function App() {
                       ))}
                   </>
                 )}
-                {tab === "Activity" && (
+                {!watching && tab === "Activity" && (
                   <div className="activity-list">
                     {events.length ? (
                       events.map((e) => (
@@ -746,7 +800,7 @@ function App() {
                     )}
                   </div>
                 )}
-                {tab === "Changes" && (
+                {!watching && tab === "Changes" && (
                   <>
                     {task ? (
                       <>
@@ -806,7 +860,7 @@ function App() {
                     )}
                   </>
                 )}
-                {tab === "Checks" && (
+                {!watching && tab === "Checks" && (
                   <>
                     {(
                       task?.checks ||
@@ -841,7 +895,7 @@ function App() {
                     </p>
                   </>
                 )}
-                {tab === "History" && (
+                {!watching && tab === "History" && (
                   <>
                     {projectTasks.length ? (
                       projectTasks.toReversed().map((t) => (
@@ -876,98 +930,116 @@ function App() {
                   </>
                 )}
               </div>
-              <form className="composer" onSubmit={submit}>
-                {active && (
-                  <div className="composer-mode">
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={follow}
-                        onChange={(e) => setFollow(e.target.checked)}
-                      />{" "}
-                      Steer active task
-                    </label>
-                    {follow && (
-                      <select
-                        aria-label="Worker to steer"
-                        value={target}
-                        onChange={(e) => setTarget(e.target.value)}
-                      >
-                        {active.workers
-                          .filter((w) => w.turnId)
-                          .map((w) => (
-                            <option key={w.id} value={w.id}>
-                              {w.id}
-                            </option>
-                          ))}
-                      </select>
-                    )}
-                    <button
-                      type="button"
-                      className="danger-link"
-                      onClick={() =>
-                        void send(`/tasks/${active.id}/cancel`, {})
-                      }
-                    >
-                      Stop task
-                    </button>
-                  </div>
-                )}
-                <textarea
-                  aria-label="Coding task"
-                  placeholder={
-                    follow && active
-                      ? "Send guidance to an active worker…"
-                      : "Describe what you’d like to build…"
-                  }
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  disabled={busy}
-                />
-                <div className="composer-bottom">
-                  <label>
-                    <select
-                      aria-label="Worker concurrency"
-                      value={concurrency}
-                      onChange={(e) => setConcurrency(Number(e.target.value))}
-                    >
-                      <option value={2}>2 workers + lead</option>
-                      <option value={1}>1 worker + lead</option>
-                    </select>
-                  </label>
+              {watching && observed ? (
+                <div className="watch-footer">
+                  <strong>Keep prompting in Codex.</strong>
+                  <p>
+                    This city watches that chat; it does not queue another
+                    coding task.
+                  </p>
                   <button
-                    className="primary"
-                    disabled={
-                      busy ||
-                      !prompt.trim() ||
-                      (!!active && !follow) ||
-                      !state?.runtime.authenticated
+                    className="text-button"
+                    onClick={() =>
+                      void send(`/watch/${observed.threadId}/stop`, {})
                     }
                   >
-                    {follow && active ? "Send follow-up" : "Start task"} ↗
+                    Stop watching
                   </button>
                 </div>
-                {task &&
-                  ["failed", "interrupted", "cancelled"].includes(
-                    task.status,
-                  ) && (
+              ) : (
+                <form className="composer" onSubmit={submit}>
+                  {active && (
+                    <div className="composer-mode">
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={follow}
+                          onChange={(e) => setFollow(e.target.checked)}
+                        />{" "}
+                        Steer active task
+                      </label>
+                      {follow && (
+                        <select
+                          aria-label="Worker to steer"
+                          value={target}
+                          onChange={(e) => setTarget(e.target.value)}
+                        >
+                          {active.workers
+                            .filter((w) => w.turnId)
+                            .map((w) => (
+                              <option key={w.id} value={w.id}>
+                                {w.id}
+                              </option>
+                            ))}
+                        </select>
+                      )}
+                      <button
+                        type="button"
+                        className="danger-link"
+                        onClick={() =>
+                          void send(`/tasks/${active.id}/cancel`, {})
+                        }
+                      >
+                        Stop task
+                      </button>
+                    </div>
+                  )}
+                  <textarea
+                    aria-label="Coding task"
+                    placeholder={
+                      follow && active
+                        ? "Send guidance to an active worker…"
+                        : "Describe what you’d like to build…"
+                    }
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    disabled={busy}
+                  />
+                  <div className="composer-bottom">
+                    <label>
+                      <select
+                        aria-label="Worker concurrency"
+                        value={concurrency}
+                        onChange={(e) => setConcurrency(Number(e.target.value))}
+                      >
+                        <option value={2}>2 workers + lead</option>
+                        <option value={1}>1 worker + lead</option>
+                      </select>
+                    </label>
                     <button
-                      type="button"
-                      className="text-button"
-                      disabled={busy || !!active}
-                      onClick={() =>
-                        void send("/tasks", {
-                          projectId: project.id,
-                          prompt: task.prompt,
-                          concurrency,
-                          attemptOf: task.id,
-                        })
+                      className="primary"
+                      disabled={
+                        busy ||
+                        !prompt.trim() ||
+                        (!!active && !follow) ||
+                        !state?.runtime.authenticated
                       }
                     >
-                      ↻ Retry as a new attempt
+                      {follow && active ? "Send follow-up" : "Start task"} ↗
                     </button>
-                  )}
-              </form>
+                  </div>
+                  {task &&
+                    ["failed", "interrupted", "cancelled"].includes(
+                      task.status,
+                    ) && (
+                      <button
+                        type="button"
+                        className="text-button"
+                        disabled={busy || !!active}
+                        onClick={() =>
+                          void send("/tasks", {
+                            projectId: project.id,
+                            prompt: task.prompt,
+                            concurrency,
+                            attemptOf: task.id,
+                          })
+                        }
+                      >
+                        ↻ Retry as a new attempt
+                      </button>
+                    )}
+                </form>
+              )}
             </aside>
           )}
         </section>
@@ -978,6 +1050,14 @@ function App() {
           <span>Built with intention. Powered by Codex.</span>
         </footer>
       </main>
+      {watchPicker && project && (
+        <WatchDialog
+          project={project}
+          load={api}
+          send={send}
+          onClose={() => setWatchPicker(false)}
+        />
+      )}
       {adding && (
         <div className="modal-backdrop" onClick={() => setAdding(false)}>
           <section

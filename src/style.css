@@ -1800,3 +1800,132 @@ select {
   background: #ffefd4;
   color: #af753b;
 }
+.watch-linkbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 12px;
+  background: #e8efff;
+  border: 1px solid #cad7ef;
+  color: #6a78a0;
+  font-size: 11px;
+  text-align: left;
+  padding: 11px 15px;
+}
+.watch-linkbar span {
+  color: #8a97b3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+.watch-linkbar strong {
+  font-size: 10px;
+  white-space: nowrap;
+  color: #7966b5;
+}
+.watch-mode {
+  display: flex;
+  gap: 5px;
+  padding: 8px 17px;
+  border-block: 1px solid #dce4f4;
+  background: #edf3fd;
+}
+.watch-mode button {
+  font-size: 10px;
+  border: 0;
+  padding: 7px 9px;
+}
+.watch-mode button[aria-pressed="true"] {
+  background: #dedff7;
+  color: #6252a0;
+}
+.watch-summary {
+  border: 1px solid #c8d9f2;
+  border-radius: 9px;
+  padding: 13px;
+  background: #edf5ff;
+  margin-bottom: 16px;
+}
+.watch-summary h3 {
+  font-size: 13px;
+  margin: 11px 0 5px;
+}
+.watch-summary p {
+  font-size: 11px;
+  color: #7186a2;
+}
+.watch-summary small {
+  font-size: 9px;
+  line-height: 1.7;
+  color: #8798b0;
+  display: block;
+}
+.watched-prompt {
+  padding: 14px;
+  border-left: 3px solid #9a8bda;
+  background: #f4f1ff;
+  border-radius: 5px;
+  margin-bottom: 14px;
+}
+.watched-prompt p {
+  font-size: 12px;
+  white-space: pre-wrap;
+  max-height: 230px;
+  overflow: auto;
+}
+.observed-item {
+  border-bottom: 1px solid #dce4f0;
+  padding: 10px 0;
+}
+.observed-item > small {
+  font-size: 9px;
+  color: #9c93b7;
+}
+.observed-item p {
+  font-size: 11px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: #6c7e98;
+}
+.observed-item.commandExecution p {
+  font-family: Consolas, monospace;
+  font-size: 10px;
+  max-height: 160px;
+  overflow: auto;
+}
+.watch-footer {
+  padding: 15px 19px;
+  background: #edf3fc;
+  border-top: 1px solid #d4dff0;
+}
+.watch-footer strong {
+  font-size: 12px;
+  color: #6875a0;
+}
+.watch-footer p {
+  font-size: 10px;
+  color: #8c9bb2;
+  margin: 6px 0;
+}
+.watch-choice {
+  width: 100%;
+  text-align: left;
+  display: block;
+  font-size: 11px;
+  margin: 7px 0;
+}
+.watch-choice small {
+  display: block;
+  color: #a0acc1;
+  font-size: 8px;
+  margin-top: 5px;
+}
+.watch-choice[aria-pressed="true"] {
+  background: #e8e3fb;
+  border-color: #a99bdc;
+}
+.modal .primary {
+  margin-top: 12px;
+}

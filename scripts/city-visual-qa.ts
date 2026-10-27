@@ -149,6 +149,9 @@ try {
     "walking",
   ])
     expect(actions.has(action)).toBe(true);
+  expect(
+    Number(await builder.getAttribute("data-placed-bricks")),
+  ).toBeGreaterThan(0);
   await page.getByRole("checkbox", { name: "Reduced motion" }).check();
   await page.waitForTimeout(1500);
   const frozen = await mover.boundingBox();

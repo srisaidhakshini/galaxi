@@ -4,12 +4,16 @@ import { resolve } from "node:path";
 import { z } from "zod";
 import { Store } from "./store.ts";
 import { Controller } from "./controller.ts";
+import { ChatObserver } from "./observer.ts";
 const port = Number(process.env.PORT || 4310),
   origin = `http://127.0.0.1:${port}`;
 const store = new Store(
   resolve(process.env.CITY_DATA_DIR || ".local", "city.sqlite"),
 );
 const controller = new Controller(store);
+const observer = new ChatObserver(store, controller.runtime, () =>
+  controller.publish(),
+);
 const app = express();
 const sessions = new Set<string>();
 app.use((req, res, next) => {
@@ -88,6 +92,26 @@ app.post(
     return store.state.runtime;
   }),
 );
+app.get(
+  "/api/projects/:id/chats",
+  route(async (req) => observer.list(String(req.params.id))),
+);
+app.post(
+  "/api/watch",
+  route(async (req) => {
+    const b = z
+      .object({
+        threadId: z.string().uuid(),
+        projectId: z.string().uuid().optional(),
+      })
+      .parse(req.body);
+    return observer.watch(b.threadId, b.projectId);
+  }),
+);
+app.post(
+  "/api/watch/:id/stop",
+  route(async (req) => observer.unwatch(String(req.params.id))),
+);
 app.post(
   "/api/projects",
   route(async (req) => {
@@ -152,16 +176,31 @@ if (process.argv.includes("--production")) {
 } else {
   const { createServer } = await import("vite");
   const vite = await createServer({
-    server: { middlewareMode: true },
+    server: {
+      middlewareMode: true,
+      hmr: { host: "127.0.0.1", port: port + 1 },
+    },
     appType: "spa",
   });
   app.use(vite.middlewares);
 }
 const server = app.listen(port, "127.0.0.1", () => {
   console.log(`Codex City: ${origin}`);
-  void controller.connect();
+  void controller.connect().then(async () => {
+    observer.start();
+    if (process.env.CITY_WATCH_THREAD)
+      try {
+        await observer.watch(process.env.CITY_WATCH_THREAD);
+      } catch (e) {
+        console.error(
+          "Could not attach requested chat:",
+          e instanceof Error ? e.message : "Unknown error",
+        );
+      }
+  });
 });
 async function shutdown() {
+  observer.stop();
   for (const t of store.state.tasks)
     if (!["succeeded", "failed", "cancelled", "interrupted"].includes(t.status))
       await controller.cancel(t.id, "interrupted");

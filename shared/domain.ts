@@ -34,6 +34,27 @@ export interface Worker {
   commit?: string;
   files?: string[];
   error?: string;
+  observedItemId?: string;
+}
+export interface ObservedChat {
+  threadId: string;
+  turnId?: string;
+  projectId: string;
+  name: string;
+  prompt: string;
+  connected: boolean;
+  checkedAt?: string;
+  changedAt?: string;
+  workObservedAt?: string;
+  error?: string;
+  worker: Worker;
+  activity: {
+    id: string;
+    kind: string;
+    message: string;
+    status?: string;
+    output?: string;
+  }[];
 }
 export interface Check {
   command: string;
@@ -88,6 +109,7 @@ export interface Snapshot {
   tasks: Task[];
   requests: PendingRequest[];
   events: CityEvent[];
+  observedChats?: ObservedChat[];
   runtime: {
     connected: boolean;
     authenticated: boolean;
