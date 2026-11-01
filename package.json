@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx --env-file-if-exists=.env server/index.ts",
-    "build": "tsc --noEmit && vite build",
-    "start": "tsx --env-file-if-exists=.env server/index.ts --production",
+    "dev": "node init && tsx --env-file-if-exists=.env server/index.ts",
+    "build": "node init && tsc --noEmit && vite build",
+    "start": "node init && tsx --env-file-if-exists=.env server/index.ts --production",
     "test": "tsx --test tests/*.test.ts",
     "spike": "tsx scripts/spike.ts",
     "test:e2e": "tsx scripts/e2e.ts",
@@ -22,7 +22,9 @@
   "dependencies": {
     "@react-three/drei": "^10.0.0",
     "@react-three/fiber": "^9.0.0",
+    "dotenv": "^8.2.0",
     "express": "^5.1.0",
+    "node-fetch": "^3.3.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "three": "^0.180.0",
