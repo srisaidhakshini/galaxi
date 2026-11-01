@@ -4,6 +4,10 @@ A local 3D workspace for real Codex coding agents. Connect a Git repository, sub
 
 ## Run
 
+The outpost gives each project a circular village on continuous terrain, with a central park, fountain and trees. Each Codex chat gets one persistent dome within its project. New prompts in that chat reuse the same building; different chats get separate domes. Earlier per-turn domes consolidate while preserving prompt history and construction progress. Separate City runner tasks retain their own work-site grouping. Related prompts share a habitat through lightweight keyword matching; use the **Habitats** tab to create, rename, or move assignments manually. The task composer can target a specific habitat. Click a dome to focus its crew, or focus the district to see its whole camp.
+
+Workers appear at their assigned work site, collecting materials, carrying bricks, placing them and hammering during observed editing. New sites start as marked land, then gain a foundation, frame, glass, door and interior. Construction stages persist; previously built domes stay built. Stages illustrate recorded execution milestones rather than a measured percentage of code completion. Site grouping does not combine execution workspaces or change verification and success counts. Watching establishes the current turn as a baseline; subsequent prompts receive assignments without backfilling old chat history. Empty reserved sites do not render a dome until a prompt is assigned.
+
 Prerequisites: Node.js **24+**, npm, Git, and an authenticated Codex CLI on PATH. Windows also needs Windows PowerShell (used for configured verification commands). Tested with Node 24.21.0 and Codex 0.164.0-alpha.11.1.
 
 ```powershell
@@ -99,3 +103,5 @@ The browser scripts register a clearly named **QA Workshop** disposable reposito
 ## Current limits
 
 This is an exercised first implementation, not every acceptance scenario is verified against a live runtime. Authentication is handled through `codex login` in your terminal. Automatic resume after controller restart, MCP elicitation forms, attachment upload, automated dependency installation, manual check editing after project registration, conflict resolution, resource cleanup, and desktop packaging are not implemented. Conflicts preserve work and block the task; stop it before retrying. Checks are configured at registration; auto-detection currently covers npm scripts only. See the verification report for the precise boundary between real and deterministic tests.
+
+Registered project chats are discovered automatically every 30 seconds, within the eight-chat observation limit. Each chat gets its own dome; selecting it shows that chat's recorded activity. Stop watching is remembered so discovery does not reconnect a chat you stopped. Discovery only reads history and never starts or resumes agents.
