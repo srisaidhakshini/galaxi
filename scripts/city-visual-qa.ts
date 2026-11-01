@@ -1,5 +1,6 @@
 import { chromium, expect as baseExpect } from "@playwright/test";
 import type { Snapshot, Task, Worker } from "../shared/domain.ts";
+import { ensureHabitats } from "../shared/habitats.ts";
 const origin = "http://127.0.0.1:4310";
 const browser = await chromium.launch({ headless: true, channel: "msedge" });
 const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
@@ -103,6 +104,7 @@ try {
       error: "Browser-only visual fixture",
     },
   };
+  ensureHabitats(state);
   await page.unroute("**/api/state*");
   await page.route("**/api/state*", (r) => r.fulfill({ json: state }));
   await page.reload();

@@ -10,15 +10,33 @@ import React, {
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Html } from "@react-three/drei";
 import * as THREE from "three";
+import {
+  districtPosition,
+  habitatPosition,
+  districtDepth,
+} from "./districtLayout";
+import {
+  HabitatDetails,
+  VillageLandscape,
+  siteColours,
+  DomeFurnishings,
+} from "./Scenery";
+import {
+  domeScale,
+  habitatPromptCount,
+  habitatFeatures,
+} from "../shared/habitatGrowth";
 import { workerPose } from "./workerMotion";
 import {
-  level,
   terminal,
+  currentObservedChat,
   type Project,
   type Task,
   type Worker,
   type ObservedChat,
+  type Habitat,
 } from "../shared/domain";
+const VillageExtent = createContext(0);
 const LabelPortal = createContext<React.RefObject<HTMLDivElement> | undefined>(
   undefined,
 );
@@ -34,11 +52,7 @@ const palette = [
   "#e780b7",
   "#579adb",
 ];
-export const plotPosition = (plot: number): [number, number, number] => {
-  const col = plot % 4,
-    row = Math.floor(plot / 4);
-  return [(col - 1.5) * 5.3, 0, (row - 0.5) * 5.7];
-};
+export const plotPosition = districtPosition;
 function Box({
   at,
   size,
@@ -57,31 +71,6 @@ function Box({
     </mesh>
   );
 }
-function Tree({
-  x,
-  z,
-  scale = 1,
-  color = "#67b995",
-}: {
-  x: number;
-  z: number;
-  scale?: number;
-  color?: string;
-}) {
-  return (
-    <group position={[x, 0, z]} scale={scale}>
-      <Box at={[0, 0.5, 0]} size={[0.17, 1, 0.17]} color="#9c6d5e" />
-      <mesh position={[0, 1.4, 0]} castShadow>
-        <icosahedronGeometry args={[0.7, 1]} />
-        <meshStandardMaterial color={color} />
-      </mesh>
-      <mesh position={[0.2, 1.9, 0]} castShadow>
-        <icosahedronGeometry args={[0.47, 0]} />
-        <meshStandardMaterial color={color} />
-      </mesh>
-    </group>
-  );
-}
 function Person({
   worker,
   index,
@@ -89,6 +78,7 @@ function Person({
   motion,
   onPlacement,
   placedBricks = 0,
+  siteScale = 1,
 }: {
   worker: Worker;
   index: number;
@@ -96,6 +86,7 @@ function Person({
   motion: boolean;
   onPlacement?: () => void;
   placedBricks?: number;
+  siteScale?: number;
 }) {
   const root = useRef<THREE.Group>(null),
     body = useRef<THREE.Group>(null),
@@ -135,7 +126,7 @@ function Person({
         ? "#dc6b7e"
         : worker.role === "Lead"
           ? "#9673d8"
-          : "#468bd7";
+          : ["#438faf", "#e18b54", "#62a088", "#c47d95"][index % 4];
   useFrame((_, dt) => {
     if (!root.current || !body.current) return;
     const delta = Math.min(dt, 0.05);
@@ -150,8 +141,8 @@ function Person({
     }
     if (motion) age.current += delta;
     const pose = workerPose(worker.status, age.current, index);
-    const dx = pose.x - root.current.position.x,
-      dz = pose.z - root.current.position.z,
+    const dx = pose.x * siteScale - root.current.position.x,
+      dz = pose.z * siteScale - root.current.position.z,
       distance = Math.hypot(dx, dz);
     const walking = motion && distance > 0.001;
     if (
@@ -319,8 +310,8 @@ function Person({
   return (
     <group
       ref={root}
-      position={[-1.5 + index * 0.4, 0.18, 1.55]}
-      scale={1.3}
+      position={[(-1.5 + index * 0.4) * siteScale, 0.18, 1.55 * siteScale]}
+      scale={1.65}
       onClick={(e) => {
         e.stopPropagation();
         onClick();
@@ -470,56 +461,8 @@ function Person({
     </group>
   );
 }
-function Fountain({ motion }: { motion: boolean }) {
-  const water = useRef<THREE.Mesh>(null);
-  useFrame(({ clock }) => {
-    if (water.current && motion)
-      water.current.scale.y = 1 + Math.sin(clock.elapsedTime * 3) * 0.12;
-  });
-  return (
-    <group position={[0, 0.08, 0]}>
-      <mesh receiveShadow>
-        <cylinderGeometry args={[0.64, 0.72, 0.16, 12]} />
-        <meshStandardMaterial color="#b5bfdc" />
-      </mesh>
-      <mesh position={[0, 0.1, 0]}>
-        <cylinderGeometry args={[0.55, 0.55, 0.04, 16]} />
-        <meshStandardMaterial color="#59c9ef" roughness={0.2} />
-      </mesh>
-      <mesh ref={water} position={[0, 0.38, 0]}>
-        <coneGeometry args={[0.12, 0.48, 8]} />
-        <meshStandardMaterial color="#94e8ff" transparent opacity={0.8} />
-      </mesh>
-    </group>
-  );
-}
-function Windmill({ motion }: { motion: boolean }) {
-  const blades = useRef<THREE.Group>(null);
-  useFrame((_, delta) => {
-    if (blades.current && motion) blades.current.rotation.z += delta * 0.4;
-  });
-  return (
-    <group position={[-11.5, 0, 5.8]}>
-      <mesh position={[0, 1.2, 0]} castShadow>
-        <cylinderGeometry args={[0.2, 0.5, 2.4, 6]} />
-        <meshStandardMaterial color="#d4dcf0" />
-      </mesh>
-      <group ref={blades} position={[0, 2.15, 0.3]}>
-        {[0, 1, 2, 3].map((i) => (
-          <group key={i} rotation={[0, 0, (i * Math.PI) / 2]}>
-            <Box
-              at={[0, 0.6, 0]}
-              size={[0.2, 1.2, 0.07]}
-              color={i % 2 ? "#f2929a" : "#f6e5c7"}
-            />
-          </group>
-        ))}
-      </group>
-    </group>
-  );
-}
-function Streetscape({ rows, motion }: { rows: number; motion: boolean }) {
-  const depth = Math.max(21, rows * 5.7 + 9);
+
+function MarsTerrain({ projects }: { projects: Project[] }) {
   return (
     <>
       <mesh
@@ -527,295 +470,287 @@ function Streetscape({ rows, motion }: { rows: number; motion: boolean }) {
         position={[0, -0.08, 0]}
         receiveShadow
       >
-        <planeGeometry args={[2000, 2000]} />
-        <meshStandardMaterial color="#b8cfbc" roughness={1} />
+        <planeGeometry args={[4000, 4000]} />
+        <meshStandardMaterial color="#ba9479" roughness={1} />
       </mesh>
-      {[-22, -16, 16, 22].map((x) => (
-        <group key={x}>
-          <Tree x={x} z={-10} color="#9aace0" />
-          <Tree x={x + 2} z={14} color="#e6b476" />
-          <Tree x={x - 1} z={22} color="#79b9a5" />
-        </group>
-      ))}
-      <Box at={[0, 0.035, -11.4]} size={[100, 0.06, 1.1]} color="#74839e" />
-      <Box at={[-16, 0.035, 10]} size={[1.1, 0.06, 100]} color="#74839e" />
-      <Box at={[16, 0.035, 10]} size={[1.1, 0.06, 100]} color="#74839e" />
-      {Array.from({ length: rows + 1 }, (_, i) => i * 5.7 - 5.7).map((z) => (
-        <group key={z}>
-          <Box at={[-0.4, 0.045, z]} size={[60, 0.08, 1.2]} color="#74839e" />
-          <Box
-            at={[-0.4, 0.09, z - 0.68]}
-            size={[60, 0.07, 0.18]}
-            color="#d3d8ec"
-          />
-          <Box
-            at={[-0.4, 0.09, z + 0.68]}
-            size={[60, 0.07, 0.18]}
-            color="#d3d8ec"
-          />
-          {[-9, -6, -3, 3, 6, 9].map((x) => (
-            <Box
-              key={x}
-              at={[x, 0.095, z]}
-              size={[0.65, 0.012, 0.035]}
-              color="#ffe7a7"
+      {Array.from({ length: Math.max(35, projects.length * 18) }, (_, i) => {
+        const side = i % 2 ? -1 : 1,
+          x = Math.floor(i / 18) * 80 + side * (18 + (i % 7) * 1.1),
+          z = -22 + (i % 18) * 5.2;
+        return (
+          <mesh
+            key={i}
+            position={[x, 0.12, z]}
+            rotation={[i, 0.6 * i, 0.2]}
+            scale={[0.6 + (i % 3) * 0.2, 0.3 + (i % 4) * 0.12, 0.5]}
+            castShadow
+          >
+            <icosahedronGeometry args={[0.45, 0]} />
+            <meshStandardMaterial
+              color={["#b78366", "#d7ad88", "#b39783"][i % 3]}
+              roughness={1}
             />
-          ))}
-        </group>
-      ))}
-      <Box at={[0, 0.06, 2]} size={[1, 0.08, 100]} color="#74839e" />
-      <Fountain motion={motion} />
-      {Array.from({ length: rows * 4 + 8 }, (_, i) => (
-        <Tree
-          key={i}
-          x={i % 2 ? -11.5 : 9.8}
-          z={-6 + Math.floor(i / 2) * 2}
-          scale={0.65 + (i % 3) * 0.12}
-          color={["#76bd9d", "#efa78c", "#a493d5", "#dfb763"][i % 4]}
-        />
-      ))}
-      {[-8, -4, 3, 7].map((x, i) => (
-        <group key={x}>
-          <Tree
-            x={x}
-            z={8.4}
-            color={["#ef9ead", "#8eacd9", "#e5bc66", "#74bca2"][i]}
-          />
-          <Box
-            at={[x + 0.8, 0.32, 8.3]}
-            size={[0.7, 0.18, 0.3]}
-            color="#a77765"
-          />
-          <Box
-            at={[x + 0.8, 0.2, 8.3]}
-            size={[0.5, 0.25, 0.2]}
-            color="#5d6c8c"
-          />
-        </group>
-      ))}
-      {[-8, 8].flatMap((x) =>
-        [-5.7, 0, 5.7].map((z) => (
-          <group key={`${x}-${z}`} position={[x, 0.12, z + 0.8]}>
-            <Box at={[0, 0.7, 0]} size={[0.06, 1.4, 0.06]} color="#56627e" />
-            <mesh position={[0, 1.45, 0]}>
-              <sphereGeometry args={[0.13, 6, 6]} />
-              <meshStandardMaterial
-                color="#ffdc85"
-                emissive="#ffbd53"
-                emissiveIntensity={0.6}
-              />
-            </mesh>
-          </group>
-        )),
-      )}
-      <Windmill motion={motion} />
+          </mesh>
+        );
+      })}
     </>
   );
 }
-function Building({
-  project,
-  task,
+function hasVillageSite(h: Habitat) {
+  return h.members.length > 0 || (h.constructionStage ?? 5) > 0;
+}
+function HabitatDome({
+  current,
+  habitat,
+  workers,
+  ownedTasks,
   selected,
   onSelect,
   onWorker,
   motion,
-  observed = [],
 }: {
-  project: Project;
-  task?: Task;
+  current: boolean;
+  habitat: Habitat;
+  workers: Worker[];
+  ownedTasks: Task[];
   selected: boolean;
   onSelect: () => void;
   onWorker: (w: Worker) => void;
   motion: boolean;
-  observed?: ObservedChat[];
 }) {
-  const [hover, setHover] = useState(false);
+  const promptCount = habitatPromptCount(habitat);
+  const size = domeScale(promptCount);
+  const initialSize = useRef(size);
+  const structure = useRef<THREE.Group>(null);
+  useFrame((_, dt) => {
+    if (structure.current) {
+      const next = motion
+        ? THREE.MathUtils.damp(
+            structure.current.scale.x,
+            size,
+            4,
+            Math.min(dt, 0.1),
+          )
+        : size;
+      structure.current.scale.setScalar(next);
+    }
+  });
+  const [hovered, setHovered] = useState(false);
   const [bricks, setBricks] = useState<Record<string, number>>({});
-  const sessionKey = task?.id || observed.map((c) => c.prompt).join("|");
-  useEffect(() => setBricks({}), [sessionKey]);
-  const l = level(project.successes),
-    color = palette[project.plot % palette.length],
-    height = 0.85 + (l - 1) * 0.55;
-  const workers = [
-    ...(task?.workers || []),
-    ...observed.map((c) => c.worker),
-  ].filter((w) => w.threadId);
-  const busy =
-    !!(task && !terminal(task.status)) ||
-    observed.some((c) =>
-      ["editing", "checking", "running commands", "inspecting"].includes(
-        c.worker.status,
-      ),
+  const [stage, setStage] = useState(habitat.constructionStage ?? 5);
+  const targetStage = habitat.constructionStage ?? 5;
+  useEffect(() => {
+    if (stage >= targetStage) return;
+    const timer = setTimeout(
+      () => setStage((n) => Math.min(targetStage, n + 1)),
+      1700,
     );
+    return () => clearTimeout(timer);
+  }, [stage, targetStage]);
+  const features = habitatFeatures(promptCount, stage);
+  const siteColour = siteColours[habitat.plot % siteColours.length];
+  const editing = workers.some((w) => w.status === "editing"),
+    busy =
+      workers.some((w) =>
+        [
+          "editing",
+          "checking",
+          "running commands",
+          "inspecting",
+          "planning",
+        ].includes(w.status),
+      ) || ownedTasks.some((t) => !terminal(t.status));
+  const waiting = workers.some(
+    (w) => w.status.includes("waiting") || w.status === "blocked",
+  );
+  const failed = ownedTasks.at(-1)?.status === "failed";
+  const accent = failed
+    ? "#d78572"
+    : waiting
+      ? "#e9bd77"
+      : busy
+        ? "#9ecdc6"
+        : "#b4c6c8";
   return (
-    <group position={plotPosition(project.plot)}>
-      <group
-        onClick={(e) => {
-          e.stopPropagation();
-          onSelect();
-        }}
-        onPointerOver={() => {
-          setHover(true);
-          document.body.style.cursor = "pointer";
-        }}
-        onPointerOut={() => {
-          setHover(false);
-          document.body.style.cursor = "auto";
-        }}
-      >
-        <Box
-          at={[0, 0.06, 0]}
-          size={[4.25, 0.12, 4.35]}
-          color={selected ? "#c9bdff" : hover ? "#e2d9ff" : "#dce3ee"}
-        />
-        <Box at={[0, 0.17, 0]} size={[3.25, 0.14, 2.7]} color="#bec5da" />
-        <Box
-          at={[0, height / 2 + 0.24, 0]}
-          size={[2.5, height, 2]}
-          color={color}
-        />
-        {l < 3 ? (
-          <mesh
-            position={[0, height + 0.6, 0]}
-            rotation={[0, Math.PI / 4, 0]}
-            castShadow
-          >
-            <coneGeometry args={[1.95, 0.9, 4]} />
-            <meshStandardMaterial color="#465579" />
+    <group position={habitatPosition(habitat.plot)}>
+      <group ref={structure} scale={initialSize.current}>
+        {current && (
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}>
+            <ringGeometry args={[2.58, 2.72, 48]} />
+            <meshBasicMaterial color="#f3c761" transparent opacity={0.8} />
           </mesh>
-        ) : (
-          <Box
-            at={[0, height + 0.32, 0]}
-            size={[2.7, 0.16, 2.2]}
-            color="#51618c"
-          />
         )}
-        {l >= 3 && (
-          <Box
-            at={[-0.75, height + 0.65, 0]}
-            size={[0.75, 0.6, 1.4]}
-            color="#ddd4ba"
-          />
-        )}
-        {l >= 4 && (
-          <Box
-            at={[1.2, height * 0.5 + 0.2, -0.3]}
-            size={[0.7, height * 0.85, 1.5]}
-            color={color}
-          />
-        )}{" "}
-        {l === 5 && (
-          <>
-            <Box
-              at={[0, height + 1, 0]}
-              size={[0.15, 1.4, 0.15]}
-              color="#5c6a61"
-            />
-            <Box
-              at={[0.3, height + 1.45, 0]}
-              size={[0.6, 0.35, 0.05]}
-              color="#ddb658"
-            />
-          </>
-        )}
-        <Box at={[0, 0.65, 1.015]} size={[0.45, 0.85, 0.04]} color="#415c59" />
-        {Array.from({ length: l < 3 ? 1 : l }).map((_, floor) =>
-          [-0.75, 0.75].map((x, i) => (
-            <group key={`${floor}-${i}`}>
-              <Box
-                at={[x, 0.85 + floor * 0.43, 1.025]}
-                size={[0.42, 0.34, 0.045]}
-                color={busy ? "#ffe0a1" : "#a3dcf2"}
-              />
-              <Box
-                at={[x, 0.85 + floor * 0.43, 1.06]}
-                size={[0.035, 0.35, 0.035]}
-                color="#e6d5b6"
-              />
-            </group>
-          )),
-        )}
-        <Box
-          at={[0.7, height + 0.6, -0.3]}
-          size={[0.25, 0.9, 0.3]}
-          color="#b5a48e"
+        <HabitatDetails
+          stage={features.stage}
+          colour={siteColour}
+          busy={busy}
         />
-        {busy &&
-          [-1.5, 1.5].map((x) => (
-            <group key={x}>
-              <Box
-                at={[x, height / 2, 1.3]}
-                size={[0.07, height + 0.6, 0.07]}
-                color="#d7aa62"
+        <group
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect();
+          }}
+          onPointerOver={(e) => {
+            e.stopPropagation();
+            setHovered(true);
+            document.body.style.cursor = "pointer";
+          }}
+          onPointerOut={() => {
+            setHovered(false);
+            document.body.style.cursor = "auto";
+          }}
+        >
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.025, 0]}>
+            <circleGeometry args={[2.65, 32]} />
+            <meshStandardMaterial color="#ba9779" />
+          </mesh>
+          {features.foundation && (
+            <mesh position={[0, 0.09, 0]} castShadow receiveShadow>
+              <cylinderGeometry args={[2.35, 2.45, 0.18, 16]} />
+              <meshStandardMaterial color="#b9b9ad" />
+            </mesh>
+          )}
+          {Array.from({ length: features.glassPanels }, (_, i) => (
+            <mesh key={"glass-" + i} position={[0, 0.21, 0]}>
+              <sphereGeometry
+                args={[
+                  2.08,
+                  4,
+                  8,
+                  (i * Math.PI) / 4,
+                  Math.PI / 4 - 0.025,
+                  0,
+                  Math.PI / 2,
+                ]}
               />
-              <Box
-                at={[x, height / 2, -1.3]}
-                size={[0.07, height + 0.6, 0.07]}
-                color="#d7aa62"
+              <meshStandardMaterial
+                color={siteColour}
+                transparent
+                opacity={selected || editing ? 0.1 : 0.2}
+                roughness={0.15}
+                metalness={0.15}
+                side={THREE.DoubleSide}
+                depthWrite={false}
               />
-              <Box
-                at={[x, height * 0.7, 0]}
-                size={[0.1, 0.08, 2.7]}
-                color="#d7aa62"
-              />
-            </group>
+            </mesh>
           ))}
-        <Label position={[0, height + 1.35, 0]} center>
-          <button
-            className={`plot-label ${selected ? "selected" : ""}`}
-            onClick={onSelect}
-          >
-            {project.name}
-            <span>
-              LV {l}{" "}
-              {observed.length ? " • WATCHING CODEX" : busy ? " • WORKING" : ""}
-            </span>
-          </button>
-        </Label>
-      </group>
-      {busy && (
-        <group>
-          <Box
-            at={[-3.15, 0.3, 2.15]}
-            size={[0.5, 0.4, 0.55]}
-            color="#d58b68"
-          />
-          <Box
-            at={[-3.15, 0.55, 2.15]}
-            size={[0.4, 0.12, 0.4]}
-            color="#f4b481"
-          />
-          <Box
-            at={[1.55, 0.22, -1.5]}
-            size={[0.5, 0.18, 0.65]}
-            color="#91b9df"
-          />
-          {[0.4, 0.9, 1.4].map((y) => (
-            <Box
-              key={y}
-              at={[1.6, y, 0]}
-              size={[0.08, 0.06, 2.8]}
-              color="#ffcc64"
+          {features.frame && (
+            <mesh position={[0, 0.22, 0]}>
+              <sphereGeometry
+                args={[2.1, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2]}
+              />
+              <meshStandardMaterial
+                color="#e8e6db"
+                wireframe
+                roughness={0.65}
+              />
+            </mesh>
+          )}
+          <mesh position={[0, 0.25, 0]} rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[2.12, 0.055, 6, 36]} />
+            <meshStandardMaterial
+              color={current ? "#f2c65e" : siteColour}
+              emissive={current ? "#efb935" : "#000000"}
+              emissiveIntensity={current ? 0.7 : 0}
             />
-          ))}
+          </mesh>
+          {features.door && (
+            <>
+              <Box
+                at={[0, 0.62, 1.98]}
+                size={[0.86, 1.1, 0.38]}
+                color="#e6e1ca"
+              />
+              <Box
+                at={[0, 0.58, 2.19]}
+                size={[0.62, 0.88, 0.06]}
+                color="#7d8d91"
+              />
+              <Box
+                at={[0, 1.04, 2.23]}
+                size={[0.4, 0.055, 0.03]}
+                color={accent}
+              />
+            </>
+          )}
+          <DomeFurnishings features={features} colour={siteColour} />
+          {busy && stage >= 1 && stage < 5 && (
+            <>
+              <Box
+                at={[2.25, 1.1, 0]}
+                size={[0.055, 2.1, 0.055]}
+                color="#e7be7c"
+              />
+              <Box
+                at={[2.25, 1.1, 1.2]}
+                size={[0.055, 2.1, 0.055]}
+                color="#e7be7c"
+              />
+              {[0.5, 1, 1.5, 2].map((y) => (
+                <Box
+                  key={y}
+                  at={[2.25, y, 0.6]}
+                  size={[0.08, 0.05, 1.3]}
+                  color="#e7be7c"
+                />
+              ))}
+            </>
+          )}
+          <Label position={[0, 3.0, 0]} center>
+            <button
+              className={"habitat-label " + (selected ? "selected" : "")}
+              aria-pressed={selected}
+              data-active={busy}
+              data-stage={stage}
+              data-hovered={hovered}
+              data-current={current}
+              data-prompt-count={promptCount}
+              data-dome-scale={size.toFixed(3)}
+              data-building-stage={features.stage}
+              data-glass-panels={features.glassPanels}
+              data-features={Object.entries(features)
+                .filter(
+                  ([k, v]) =>
+                    k !== "stage" && k !== "glassPanels" && v === true,
+                )
+                .map(([k]) => k)
+                .join(",")}
+              onClick={onSelect}
+              title={habitat.members.map((m) => m.prompt).join(" · ")}
+            >
+              <strong>{habitat.name}</strong>
+            </button>
+          </Label>
         </group>
-      )}
-      {Object.entries(bricks).map(([id, count], workerIndex) => (
-        <group key={id} position={[1.1 - workerIndex * 0.48, 0.2, 1.15]}>
-          {Array.from({ length: Math.min(count, 12) }, (_, i) => (
+        <group position={[-3.15, 0, 2.15]}>
+          <Box at={[0, 0.2, 0]} size={[0.85, 0.18, 0.85]} color="#8f7762" />
+          {[0, 1, 2].map((i) => (
             <Box
               key={i}
-              at={[(i % 3) * 0.23, Math.floor(i / 3) * 0.15, 0]}
-              size={[0.22, 0.14, 0.18]}
-              color={i % 2 ? "#da8d69" : "#e8a27b"}
+              at={[(i % 2) * 0.25 - 0.15, 0.4 + Math.floor(i / 2) * 0.16, 0]}
+              size={[0.4, 0.15, 0.3]}
+              color="#d7aa83"
             />
           ))}
         </group>
-      ))}
+        {Object.entries(bricks).map(([id, count], wi) => (
+          <group key={id} position={[1.1 - wi * 0.35, 0.2, 1.15]}>
+            {Array.from({ length: Math.min(count, 12) }, (_, i) => (
+              <Box
+                key={i}
+                at={[(i % 3) * 0.23, Math.floor(i / 3) * 0.15, 0]}
+                size={[0.22, 0.14, 0.18]}
+                color={i % 2 ? "#cd9874" : "#dfad83"}
+              />
+            ))}
+          </group>
+        ))}
+      </group>
       {workers.map((w, i) => (
         <Person
-          key={w.id}
+          key={w.threadId || w.id}
           worker={w}
+          siteScale={size}
           index={i}
           onClick={() => onWorker(w)}
           motion={motion}
@@ -828,6 +763,120 @@ function Building({
     </group>
   );
 }
+
+function ProjectDistrict({
+  project,
+  habitats,
+  tasks,
+  observed,
+  selected,
+  selectedHabitat,
+  onSelect,
+  onSelectHabitat,
+  onWorker,
+  motion,
+}: {
+  project: Project;
+  habitats: Habitat[];
+  tasks: Task[];
+  observed: ObservedChat[];
+  selected: boolean;
+  selectedHabitat?: string;
+  onSelect: () => void;
+  onSelectHabitat: (id: string) => void;
+  onWorker: (w: Worker) => void;
+  motion: boolean;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const watched = currentObservedChat(observed.filter((c) => c.habitatId));
+  const running = tasks.filter((t) => !terminal(t.status)).at(-1);
+  const currentHabitat = running?.habitatId || watched?.habitatId;
+  const villageExtent = useContext(VillageExtent);
+  const maxPlot = Math.max(0, ...habitats.map((h) => h.plot)),
+    depth = districtDepth(maxPlot);
+  return (
+    <group position={districtPosition(project.plot, villageExtent)}>
+      <group
+        onPointerOver={() => setHovered(true)}
+        onPointerOut={() => setHovered(false)}
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelect();
+        }}
+      >
+        <mesh
+          rotation={[-Math.PI / 2, 0, 0]}
+          position={[0, -0.035, 0]}
+          receiveShadow
+        >
+          <circleGeometry args={[depth / 2, 80]} />
+          <meshStandardMaterial color={selected ? "#b3b98d" : "#aeb38a"} />
+        </mesh>
+        <VillageLandscape
+          radius={depth / 2}
+          motion={motion}
+          sites={habitats
+            .filter(hasVillageSite)
+            .map((h) => habitatPosition(h.plot))}
+        />
+        {habitats.filter(hasVillageSite).map((h) => {
+          const [x, , z] = habitatPosition(h.plot),
+            length = Math.hypot(x, z);
+          return (
+            <group key={h.id} rotation={[0, Math.atan2(x, z), 0]}>
+              <Box
+                at={[0, 0.006, length / 2]}
+                size={[0.8, 0.025, length - 3]}
+                color="#dfc8a2"
+                castShadow={false}
+              />
+            </group>
+          );
+        })}
+        <Label position={[0, 3.7, 0]} center>
+          <button
+            className={
+              "plot-label district-label " + (selected ? "selected" : "")
+            }
+            onClick={onSelect}
+            data-hovered={hovered}
+          >
+            <strong>{project.name}</strong>
+          </button>
+        </Label>
+      </group>
+      {habitats.filter(hasVillageSite).map((h) => {
+        const own = tasks.filter((t) => t.habitatId === h.id);
+        const seen = new Set<string>();
+        const workers = [
+          ...own.filter((t) => !terminal(t.status)).flatMap((t) => t.workers),
+          ...observed.filter((c) => c.habitatId === h.id).map((c) => c.worker),
+          ...own
+            .filter((t) => terminal(t.status))
+            .slice(-1)
+            .flatMap((t) => t.workers),
+        ].filter((w) => {
+          if (!w.threadId || seen.has(w.threadId)) return false;
+          seen.add(w.threadId);
+          return true;
+        });
+        return (
+          <HabitatDome
+            key={h.id}
+            habitat={h}
+            current={currentHabitat === h.id}
+            workers={workers}
+            ownedTasks={own}
+            selected={selectedHabitat === h.id}
+            onSelect={() => onSelectHabitat(h.id)}
+            onWorker={onWorker}
+            motion={motion}
+          />
+        );
+      })}
+    </group>
+  );
+}
 export type CameraCommand = {
   action: "left" | "right" | "in" | "out" | "top";
   id: number;
@@ -837,36 +886,155 @@ function Camera({
   reset,
   command,
   pan,
+  projects,
+  habitats,
+  focusHabitat,
 }: {
   focus?: number;
   reset: number;
   command?: CameraCommand;
   pan: boolean;
+  projects: Project[];
+  habitats: Habitat[];
+  focusHabitat?: string;
 }) {
-  const controls = useRef<any>(null);
-  const { camera } = useThree();
+  const controls = useRef<any>(null),
+    { camera, gl } = useThree();
+  const villageExtent = useContext(VillageExtent);
+  const farX = Math.max(
+    0,
+    ...projects.map((p) => districtPosition(p.plot, villageExtent)[0]),
+  );
+  const farZ = Math.max(28, ...habitats.map((h) => districtDepth(h.plot)));
+
+  const heldKeys = useRef(new Set<string>());
   useEffect(() => {
-    const p = focus === undefined ? [0, 0, 1.5] : plotPosition(focus);
-    controls.current?.target.set(p[0], 0, p[2]);
-    const distance = focus === undefined ? 1 : 0.58;
-    camera.position.set(
-      p[0] + 17 * distance,
-      19 * distance,
-      p[2] + 22 * distance,
+    const keys = heldKeys.current;
+    const movement = new Set([
+      "w",
+      "a",
+      "s",
+      "d",
+      "arrowup",
+      "arrowdown",
+      "arrowleft",
+      "arrowright",
+    ]);
+    const clear = () => keys.clear();
+    const down = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (
+        e.altKey ||
+        e.ctrlKey ||
+        e.metaKey ||
+        target.closest?.(
+          "input,textarea,select,[contenteditable=true],[role=textbox]",
+        )
+      )
+        return;
+      const surface = gl.domElement.closest("[data-camera-surface]");
+      if (
+        !surface ||
+        (!surface.matches(":hover") &&
+          !surface.contains(document.activeElement))
+      )
+        return;
+      const key = e.key.toLowerCase();
+      if (movement.has(key)) {
+        e.preventDefault();
+        keys.add(key);
+      }
+    };
+    const up = (e: KeyboardEvent) => keys.delete(e.key.toLowerCase());
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup", up);
+    window.addEventListener("blur", clear);
+    document.addEventListener("visibilitychange", clear);
+    return () => {
+      window.removeEventListener("keydown", down);
+      window.removeEventListener("keyup", up);
+      window.removeEventListener("blur", clear);
+      document.removeEventListener("visibilitychange", clear);
+      clear();
+    };
+  }, [gl]);
+  useFrame((_, dt) => {
+    const c = controls.current,
+      keys = heldKeys.current;
+    if (!c || !keys.size) return;
+    const x =
+      Number(keys.has("d") || keys.has("arrowright")) -
+      Number(keys.has("a") || keys.has("arrowleft"));
+    const z =
+      Number(keys.has("w") || keys.has("arrowup")) -
+      Number(keys.has("s") || keys.has("arrowdown"));
+    const forward = c.target.clone().sub(camera.position);
+    forward.y = 0;
+    forward.normalize();
+    const right = new THREE.Vector3().crossVectors(
+      forward,
+      new THREE.Vector3(0, 1, 0),
     );
+    const offset = forward.multiplyScalar(z).add(right.multiplyScalar(x));
+    if (!offset.lengthSq()) return;
+    offset
+      .normalize()
+      .multiplyScalar(
+        Math.min(dt, 0.05) *
+          Math.max(4, camera.position.distanceTo(c.target) * 0.35),
+      );
+    const next = c.target.clone().add(offset);
+    next.x = THREE.MathUtils.clamp(next.x, -30, farX + 30);
+    next.z = THREE.MathUtils.clamp(next.z, -farZ, farZ + 35);
+    offset.copy(next).sub(c.target);
+    camera.position.add(offset);
+    c.target.copy(next);
+    c.update();
+  });
+
+  useEffect(() => {
+    let target = new THREE.Vector3(farX / 2, 0, 0),
+      span = Math.max(34, farX + 35, farZ);
+    const dome = habitats.find((h) => h.id === focusHabitat),
+      project = dome
+        ? projects.find((p) => p.id === dome.projectId)
+        : undefined;
+    if (dome && project) {
+      const origin = districtPosition(project.plot, villageExtent),
+        local = habitatPosition(dome.plot);
+      target.set(origin[0] + local[0], 0, local[2]);
+      span = 13;
+    } else if (focus !== undefined) {
+      const origin = districtPosition(focus, villageExtent),
+        group = habitats.filter(
+          (h) => h.projectId === projects.find((p) => p.plot === focus)?.id,
+        ),
+        depth = districtDepth(Math.max(0, ...group.map((h) => h.plot)));
+      target.set(origin[0], 0, 0);
+      span = Math.max(32, depth);
+    }
+    camera.position
+      .copy(target)
+      .add(new THREE.Vector3(span * 0.68, span * 0.82, span * 0.95));
+    controls.current?.target.copy(target);
     controls.current?.update();
-  }, [focus, reset, camera]);
+  }, [focus, reset, focusHabitat, projects.length, camera]);
   useEffect(() => {
     if (!command || !controls.current) return;
     const c = controls.current,
-      offset = camera.position.clone().sub(c.target),
-      s = new THREE.Spherical().setFromVector3(offset);
-    if (command.action === "left") s.theta -= Math.PI / 8;
-    if (command.action === "right") s.theta += Math.PI / 8;
-    if (command.action === "in") s.radius = Math.max(6, s.radius * 0.8);
-    if (command.action === "out") s.radius = Math.min(60, s.radius * 1.25);
-    if (command.action === "top") s.phi = 0.15;
-    camera.position.copy(c.target).add(new THREE.Vector3().setFromSpherical(s));
+      spherical = new THREE.Spherical().setFromVector3(
+        camera.position.clone().sub(c.target),
+      );
+    if (command.action === "left") spherical.theta -= Math.PI / 8;
+    if (command.action === "right") spherical.theta += Math.PI / 8;
+    if (command.action === "in")
+      spherical.radius = Math.max(6, spherical.radius * 0.8);
+    if (command.action === "out")
+      spherical.radius = Math.min(500, spherical.radius * 1.25);
+    if (command.action === "top") spherical.phi = 0.15;
+    camera.position
+      .copy(c.target)
+      .add(new THREE.Vector3().setFromSpherical(spherical));
     c.update();
   }, [command, camera]);
   return (
@@ -885,9 +1053,9 @@ function Camera({
       minPolarAngle={0.1}
       maxPolarAngle={1.25}
       minDistance={6}
-      maxDistance={60}
-      zoomSpeed={0.65}
-      panSpeed={0.65}
+      maxDistance={500}
+      zoomSpeed={0.7}
+      panSpeed={0.8}
       rotateSpeed={0.55}
       enableDamping
       dampingFactor={0.12}
@@ -895,13 +1063,13 @@ function Camera({
         if (controls.current) {
           controls.current.target.x = THREE.MathUtils.clamp(
             controls.current.target.x,
-            -20,
-            20,
+            -30,
+            farX + 30,
           );
           controls.current.target.z = THREE.MathUtils.clamp(
             controls.current.target.z,
-            -12,
-            40,
+            -35,
+            farZ + 35,
           );
         }
       }}
@@ -944,6 +1112,10 @@ export default function City({
   cameraCommand,
   pan,
   observedChats = [],
+  habitats = [],
+  selectedHabitat,
+  focusHabitat,
+  onSelectHabitat,
 }: {
   projects: Project[];
   tasks: Task[];
@@ -958,23 +1130,44 @@ export default function City({
   cameraCommand?: CameraCommand;
   pan: boolean;
   observedChats?: ObservedChat[];
+  habitats?: Habitat[];
+  selectedHabitat?: string;
+  focusHabitat?: string;
+  onSelectHabitat: (id: string, projectId: string) => void;
 }) {
   const labels = useRef<HTMLDivElement>(null!);
   const simpleView = (
     <div className="simple-city">
       {projects.length ? (
         projects.map((p) => (
-          <button
-            key={p.id}
-            className="simple-building"
-            onClick={() => onSelect(p.id)}
-          >
-            <span style={{ color: palette[p.plot % palette.length] }}>▥</span>
-            <strong>{p.name}</strong>
-            <small>
-              Level {level(p.successes)} · {p.successes} successful tasks
-            </small>
-          </button>
+          <section key={p.id} className="simple-district">
+            <button className="simple-building" onClick={() => onSelect(p.id)}>
+              <span style={{ color: palette[p.plot % palette.length] }}>⌒</span>
+              <strong>{p.name}</strong>
+              <small>
+                {
+                  habitats.filter(
+                    (h) => h.projectId === p.id && hasVillageSite(h),
+                  ).length
+                }{" "}
+                habitats · {p.successes} verified tasks
+              </small>
+            </button>
+            <div className="simple-habitats">
+              {habitats
+                .filter((h) => h.projectId === p.id)
+                .map((h) => (
+                  <button
+                    key={h.id}
+                    className="simple-habitat"
+                    onClick={() => onSelectHabitat(h.id, p.id)}
+                  >
+                    <strong>⌒ {h.name}</strong>
+                    <small>{h.members.length} assignments</small>
+                  </button>
+                ))}
+            </div>
+          </section>
         ))
       ) : (
         <div className="simple-empty">Your first project starts here.</div>
@@ -984,106 +1177,119 @@ export default function City({
   return (
     <>
       {simple && simpleView}
-      <LabelPortal.Provider value={labels}>
-        <div
-          style={{
-            display: simple ? "none" : "block",
-            height: "100%",
-            position: "relative",
-          }}
-        >
-          <Boundary onFail={onFail}>
-            <Suspense
-              fallback={
-                <div className="scene-fallback">Preparing your city…</div>
-              }
-            >
-              <Canvas
-                frameloop={simple ? "never" : "always"}
-                shadows
-                dpr={[1, 1.5]}
-                camera={{ position: [17, 19, 22], fov: 40 }}
-                gl={{ antialias: true }}
+      {!simple &&
+        (observedChats.some((c) => c.habitatId) ||
+          tasks.some((t) => !terminal(t.status) && t.habitatId)) && (
+          <button
+            className="find-crew"
+            onClick={() => {
+              const t = tasks
+                  .filter((t) => !terminal(t.status) && t.habitatId)
+                  .at(-1),
+                c = currentObservedChat(
+                  observedChats.filter((c) => c.habitatId),
+                );
+              const id = t?.habitatId || c?.habitatId,
+                project = t?.projectId || c?.projectId;
+              if (id && project) onSelectHabitat(id, project);
+            }}
+          >
+            ◎ Find current crew
+          </button>
+        )}
+      <VillageExtent.Provider
+        value={Math.max(0, ...habitats.map((h) => h.plot))}
+      >
+        <LabelPortal.Provider value={labels}>
+          <div
+            data-camera-surface
+            tabIndex={0}
+            role="region"
+            aria-label="3D village. Move with WASD or arrow keys."
+            style={{
+              display: simple ? "none" : "block",
+              height: "100%",
+              position: "relative",
+            }}
+          >
+            <Boundary onFail={onFail}>
+              <Suspense
+                fallback={
+                  <div className="scene-fallback">Preparing your city…</div>
+                }
               >
-                <color attach="background" args={["#b8cfbc"]} />
-                <fog attach="fog" args={["#b8cfbc", 48, 110]} />
-                <ambientLight intensity={0.7} />
-                <hemisphereLight args={["#dceaff", "#bca1b7", 0.8]} />
-                <directionalLight
-                  position={[-10, 18, 8]}
-                  intensity={1.9}
-                  castShadow
-                  shadow-mapSize={[2048, 2048]}
-                  shadow-camera-left={-24}
-                  shadow-camera-right={24}
-                  shadow-camera-top={24}
-                  shadow-camera-bottom={-24}
-                />
-                <group position={[0, -0.2, 0]}>
-                  <Streetscape
-                    rows={Math.max(2, Math.ceil(projects.length / 4))}
-                    motion={motion}
-                  />
-                  {Array.from(
-                    { length: Math.max(8, ...projects.map((p) => p.plot + 1)) },
-                    (_, i) =>
-                      projects[i] ? (
-                        <Building
-                          key={projects[i].id}
-                          project={projects[i]}
-                          task={tasks
-                            .filter((t) => t.projectId === projects[i].id)
-                            .at(-1)}
-                          selected={selected === projects[i].id}
-                          onSelect={() => onSelect(projects[i].id)}
-                          onWorker={onWorker}
-                          motion={motion}
-                          observed={observedChats.filter(
-                            (c) => c.projectId === projects[i].id,
-                          )}
-                        />
-                      ) : (
-                        <group key={i} position={plotPosition(i)}>
-                          <Box
-                            at={[0, -0.015, 0]}
-                            size={[4.25, 0.025, 4.35]}
-                            color={i % 2 ? "#b4cbb8" : "#bed3be"}
-                          />
-                          {i === 0 && (
-                            <>
-                              <Box
-                                at={[0, 0.2, 0]}
-                                size={[1.8, 0.18, 1.5]}
-                                color="#ded6bf"
-                              />
-                              <Box
-                                at={[0, 0.8, 0]}
-                                size={[0.08, 1.2, 0.08]}
-                                color="#8d9176"
-                              />
-                              <Box
-                                at={[0.35, 1.2, 0]}
-                                size={[0.7, 0.38, 0.04]}
-                                color="#d7a963"
-                              />
-                            </>
-                          )}
-                        </group>
+                <Canvas
+                  frameloop={simple ? "never" : "always"}
+                  shadows
+                  dpr={[1, 1.5]}
+                  camera={{ position: [17, 19, 22], fov: 40 }}
+                  gl={{ antialias: true }}
+                >
+                  <color attach="background" args={["#c4d5da"]} />
+                  <fog attach="fog" args={["#c4d5da", 170, 520]} />
+                  <ambientLight intensity={0.7} />
+                  <hemisphereLight args={["#ffe9d2", "#a77b63", 1]} />
+                  <directionalLight
+                    position={[-30, 70, 25]}
+                    intensity={1.9}
+                    castShadow
+                    shadow-mapSize={[2048, 2048]}
+                    shadow-bias={-0.0002}
+                    shadow-normalBias={0.06}
+                    shadow-camera-left={-50}
+                    shadow-camera-right={Math.max(
+                      70,
+                      ...projects.map(
+                        (p) =>
+                          districtPosition(
+                            p.plot,
+                            Math.max(0, ...habitats.map((h) => h.plot)),
+                          )[0] + 50,
                       ),
-                  )}
-                </group>
-                <Camera
-                  focus={focus}
-                  reset={reset}
-                  command={cameraCommand}
-                  pan={pan}
-                />
-              </Canvas>
-            </Suspense>
-          </Boundary>
-          <div className="city-labels" ref={labels} />
-        </div>
-      </LabelPortal.Provider>
+                    )}
+                    shadow-camera-top={100}
+                    shadow-camera-bottom={-100}
+                  />
+                  <group position={[0, -0.2, 0]}>
+                    <MarsTerrain projects={projects} />
+                    {projects.map((project) => (
+                      <ProjectDistrict
+                        key={project.id}
+                        project={project}
+                        habitats={habitats.filter(
+                          (h) => h.projectId === project.id,
+                        )}
+                        tasks={tasks.filter((t) => t.projectId === project.id)}
+                        observed={observedChats.filter(
+                          (c) => c.projectId === project.id,
+                        )}
+                        selected={selected === project.id}
+                        selectedHabitat={selectedHabitat}
+                        onSelect={() => onSelect(project.id)}
+                        onSelectHabitat={(id) =>
+                          onSelectHabitat(id, project.id)
+                        }
+                        onWorker={onWorker}
+                        motion={motion}
+                      />
+                    ))}
+                  </group>
+                  <Camera
+                    focus={focus}
+                    reset={reset}
+                    command={cameraCommand}
+                    pan={pan}
+                    projects={projects}
+                    habitats={habitats}
+                    focusHabitat={focusHabitat}
+                  />
+                </Canvas>
+              </Suspense>
+            </Boundary>
+            <div className="city-labels" ref={labels} />
+          </div>
+        </LabelPortal.Provider>
+      </VillageExtent.Provider>
     </>
   );
 }
