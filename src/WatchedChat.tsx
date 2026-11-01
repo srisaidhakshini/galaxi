@@ -107,6 +107,7 @@ export function WatchedChat({
                 /\b(test|pytest|tsc|build|lint|typecheck)\b/.test(a.message),
             )
           : chat.activity;
+  const displayed = tab === "Chat" ? visible : visible.toReversed();
   return (
     <div className="watched-chat">
       <div className="watch-summary">
@@ -114,20 +115,24 @@ export function WatchedChat({
           {chat.connected ? "◉ Watching Codex" : "! Watch disconnected"}
         </span>
         <h3>{chat.name}</h3>
-        <p>
-          {chat.error ||
-            "Read-only recorded activity. Continue the conversation in Codex."}
-        </p>
+        {chat.error && <p role="alert">{chat.error}</p>}
         <small>
           Checked{" "}
           {chat.checkedAt ? new Date(chat.checkedAt).toLocaleTimeString() : "—"}{" "}
-          · Scene reflects recent recorded work; desktop live status may be
-          unavailable.
+          · Recorded activity
         </small>
+        <details>
+          <summary>About this connection</summary>
+          <p>
+            Keep prompting in Codex. This read-only view reflects recent
+            recorded activity, which can lag the desktop. Execution and
+            approvals stay in Codex.
+          </p>
+        </details>
       </div>
-      {chat.prompt && (
+      {chat.prompt && tab === "Chat" && (
         <div className="watched-prompt">
-          <div className="eyebrow">PROMPT IN CODEX</div>
+          <div className="eyebrow">YOUR LATEST REQUEST</div>
           <p>{chat.prompt}</p>
         </div>
       )}
@@ -143,28 +148,56 @@ export function WatchedChat({
           gate; no success or upgrade is inferred here.
         </p>
       )}
-      {visible.length ? (
-        visible.map((a, i) => (
-          <article key={`${a.id}-${i}`} className={`observed-item ${a.kind}`}>
-            <small>
-              {a.kind === "userMessage"
-                ? "You"
-                : a.kind === "agentMessage"
-                  ? "Codex"
-                  : a.kind === "fileChange"
-                    ? "File edit"
-                    : "Recorded command"}{" "}
-              {a.status && `· ${a.status}`}
-            </small>
-            <p>{a.message}</p>
-            {a.output && (
-              <details>
-                <summary>Recorded output or patch</summary>
-                <pre>{a.output}</pre>
-              </details>
-            )}
-          </article>
-        ))
+      {displayed.length ? (
+        displayed.map((a, i) => {
+          if (a.kind === "commandExecution")
+            return (
+              <article
+                key={`${a.id}-${i}`}
+                className="observed-item commandExecution"
+              >
+                <details className="command-card">
+                  <summary>
+                    <span>↳ Terminal</span>
+                    <span
+                      className={`badge ${a.status === "completed" ? "completed" : a.status === "failed" ? "failed" : "running"}`}
+                    >
+                      {a.status || "Recorded"}
+                    </span>
+                    <code>{a.message}</code>
+                  </summary>
+                  <pre>{a.message}</pre>
+                  {a.output && (
+                    <details>
+                      <summary>Command output</summary>
+                      <pre>{a.output}</pre>
+                    </details>
+                  )}
+                </details>
+              </article>
+            );
+          return (
+            <article key={`${a.id}-${i}`} className={`observed-item ${a.kind}`}>
+              <small>
+                {a.kind === "userMessage"
+                  ? "You"
+                  : a.kind === "agentMessage"
+                    ? "Codex"
+                    : a.kind === "fileChange"
+                      ? "File edit"
+                      : "Recorded command"}{" "}
+                {a.status && `· ${a.status}`}
+              </small>
+              <p>{a.message}</p>
+              {a.output && (
+                <details>
+                  <summary>Recorded output or patch</summary>
+                  <pre>{a.output}</pre>
+                </details>
+              )}
+            </article>
+          );
+        })
       ) : (
         <p className="muted">No recorded items in this view yet.</p>
       )}

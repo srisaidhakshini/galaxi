@@ -2,9 +2,12 @@ import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import City, { type CameraCommand } from "./City";
 import { WatchDialog, WatchedChat } from "./WatchedChat";
+import { Icon } from "./Icon";
+import { HabitatsPanel } from "./HabitatsPanel";
 import {
   level,
   terminal,
+  currentObservedChat,
   type Snapshot,
   type Project,
   type Task,
@@ -142,7 +145,7 @@ function App() {
   const [selected, setSelected] = useState(
     localStorage.getItem("city-project") || "",
   );
-  const [tab, setTab] = useState("Chat");
+  const [tab, setTab] = useState(localStorage.getItem("city-tab") || "Chat");
   const [taskId, setTaskId] = useState("");
   const [adding, setAdding] = useState(false);
   const [watchPicker, setWatchPicker] = useState(false);
@@ -162,13 +165,42 @@ function App() {
   const moveCamera = (action: CameraCommand["action"]) =>
     setCameraCommand({ action, id: Date.now() });
   const [focus, setFocus] = useState<number>();
+  const [selectedHabitat, setSelectedHabitat] = useState(
+    localStorage.getItem("city-habitat") || "",
+  );
+  const [focusHabitat, setFocusHabitat] = useState<string | undefined>(
+    localStorage.getItem("city-habitat") || undefined,
+  );
+  const [habitatPreference, setHabitatPreference] = useState("");
   const [inspectedWorker, setWorker] = useState<Worker>();
   const [concurrency, setConcurrency] = useState(2);
   const [follow, setFollow] = useState(false);
   const [target, setTarget] = useState("lead");
   const [applyConfirm, setApplyConfirm] = useState(false);
+  const [panelWidth, setPanelWidth] = useState(() =>
+    Math.max(
+      350,
+      Math.min(620, Number(localStorage.getItem("city-panel-width")) || 430),
+    ),
+  );
+  const resize = useRef<{ x: number; width: number } | undefined>(undefined);
   const cursor = useRef(0);
   const refreshing = useRef(false);
+  useEffect(() => {
+    if (
+      !state ||
+      !selectedHabitat ||
+      state.habitats?.some((h) => h.id === selectedHabitat)
+    )
+      return;
+    const home = state.habitats?.find(
+      (h) => h.projectId === selected && h.chatThreadId,
+    );
+    setSelectedHabitat(home?.id || "");
+    setFocusHabitat(home?.id);
+    setHabitatPreference("");
+    setReset((n) => n + 1);
+  }, [state?.habitats, selected, selectedHabitat]);
   async function refresh() {
     if (refreshing.current) return;
     refreshing.current = true;
@@ -214,6 +246,22 @@ function App() {
     setWorker(undefined);
     setApplyConfirm(false);
   }, [selected]);
+  useEffect(
+    () => localStorage.setItem("city-habitat", selectedHabitat),
+    [selectedHabitat],
+  );
+  useEffect(() => localStorage.setItem("city-tab", tab), [tab]);
+  useEffect(() => {
+    const escape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setAdding(false);
+        setWatchPicker(false);
+        setWorker(undefined);
+      }
+    };
+    window.addEventListener("keydown", escape);
+    return () => window.removeEventListener("keydown", escape);
+  }, []);
   const worker = inspectedWorker
     ? [
         ...(state?.tasks.flatMap((t) => t.workers) || []),
@@ -229,9 +277,13 @@ function App() {
     project = projects.find((p) => p.id === selected),
     projectTasks = tasks.filter((t) => t.projectId === selected);
   const task = projectTasks.find((t) => t.id === taskId) || projectTasks.at(-1);
-  const observed = state?.observedChats
-    ?.filter((c) => c.projectId === selected)
-    .at(-1);
+  const projectHabitats =
+    state?.habitats?.filter((h) => h.projectId === selected) || [];
+  const projectChats =
+    state?.observedChats?.filter((c) => c.projectId === selected) || [];
+  const observed =
+    projectChats.find((c) => c.habitatId === selectedHabitat) ||
+    currentObservedChat(projectChats);
   const watching = !!observed && !cityExecution;
   const active = projectTasks.find((t) => !terminal(t.status));
   const events = (state?.events || []).filter((e) => e.taskId === task?.id);
@@ -250,12 +302,24 @@ function App() {
     }
   }
   function select(id: string) {
+    setSelectedHabitat("");
+    setHabitatPreference("");
+    setFocusHabitat(undefined);
+    setFocus(projects.find((p) => p.id === id)?.plot);
+    setReset((x) => x + 1);
     setCityExecution(false);
     setTaskId("");
     setWorker(undefined);
     setApplyConfirm(false);
     setSelected(id);
     setTab("Chat");
+  }
+  function visitHabitat(id: string, projectId = selected) {
+    select(projectId);
+    setSelectedHabitat(id);
+    setHabitatPreference(id);
+    setFocusHabitat(id);
+    setTab("Habitats");
   }
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -266,10 +330,20 @@ function App() {
             text: prompt,
             workerId: target,
           })
-        : await send("/tasks", { projectId: project.id, prompt, concurrency });
+        : await send("/tasks", {
+            projectId: project.id,
+            prompt,
+            concurrency,
+            ...(habitatPreference ? { habitatId: habitatPreference } : {}),
+          });
     if (r) {
       setPrompt("");
       if (r.id) setTaskId(r.id);
+      if (r.habitatId) {
+        setSelectedHabitat(r.habitatId);
+        setFocusHabitat(r.habitatId);
+        setReset((x) => x + 1);
+      }
     }
   }
   const activeWorkers =
@@ -284,41 +358,49 @@ function App() {
     <div className="app">
       <aside className="sidebar">
         <a className="brand" href="/" aria-label="Codex City home">
-          <span className="brand-icon">▥</span>
+          <span className="brand-icon">
+            <Icon name="city" size={25} />
+          </span>
           <span>
             codex<span className="brand-light">city</span>
-            <small>A PLACE FOR YOUR PROJECTS</small>
+            <small>YOUR DEVELOPMENT OUTPOST</small>
           </span>
         </a>
         <div className="workspace-label">
           YOUR WORKSPACE <span>LOCAL</span>
         </div>
         <button className="nav-current" onClick={() => setSelected("")}>
-          <span>◈</span> City overview{" "}
+          <Icon name="map" /> Outpost overview{" "}
           <span className="count">{projects.length}</span>
         </button>
         <div className="project-heading">
-          <span>PROJECTS</span>
+          <span>PROJECT DISTRICTS</span>
           <button
             title="Add project"
             aria-label="Add project"
             onClick={() => setAdding(true)}
           >
-            ＋
+            <Icon name="plus" size={17} />
           </button>
         </div>
-        <input
-          className="search"
-          aria-label="Search projects"
-          placeholder="⌕  Find a project"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+        <div className="search-wrap">
+          <Icon name="search" size={15} />
+          <input
+            className="search"
+            aria-label="Search projects"
+            placeholder="Find a project…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
         <nav className="projects">
           {projects
             .filter((p) => p.name.toLowerCase().includes(search.toLowerCase()))
             .map((p) => {
               const t = tasks.filter((t) => t.projectId === p.id).at(-1);
+              const watched = currentObservedChat(
+                state?.observedChats?.filter((c) => c.projectId === p.id),
+              );
               return (
                 <button
                   key={p.id}
@@ -328,20 +410,28 @@ function App() {
                   <span
                     className="project-glyph"
                     style={{
-                      background: ["#e9d7c8", "#d5e2db", "#e8dfc6"][p.plot % 3],
+                      color: ["#f5a28d", "#8dc9e9", "#d5bc79", "#b4a0ed"][
+                        p.plot % 4
+                      ],
                     }}
                   >
-                    ▤
+                    <Icon name="city" size={19} />
                   </span>
                   <span>
                     <strong>{p.name}</strong>
                     <small>
-                      {t && !terminal(t.status)
-                        ? t.status
-                        : `Level ${level(p.successes)} · ${p.successes} completed`}
+                      {watched
+                        ? watched.connected
+                          ? `Watching · ${watched.worker.status}`
+                          : "Watch disconnected"
+                        : t && !terminal(t.status)
+                          ? t.status
+                          : `Level ${level(p.successes)} · ${p.successes} completed`}
                     </small>
                   </span>
-                  <span className={`status-dot ${t?.status || "idle"}`} />
+                  <span
+                    className={`status-dot ${watched ? (watched.connected ? "succeeded" : "failed") : t?.status || "idle"}`}
+                  />
                 </button>
               );
             })}
@@ -354,7 +444,7 @@ function App() {
           )}
         </nav>
         <button className="add-project" onClick={() => setAdding(true)}>
-          ＋ Add project
+          <Icon name="plus" size={15} /> Add project
         </button>
         <div className="sidebar-bottom">
           <div className="runtime-state">
@@ -377,10 +467,12 @@ function App() {
             className="text-button"
             onClick={() => void send("/runtime/reconnect", {})}
           >
-            ↻ Reconnect runtime
+            <Icon name="refresh" size={12} /> Reconnect runtime
           </button>
           <div className="user">
-            <span>Y</span>
+            <span>
+              <Icon name="code" size={17} />
+            </span>
             <div>
               Your local workspace
               <small>On your machine. In your control.</small>
@@ -394,7 +486,7 @@ function App() {
             <span className="breadcrumb">
               Workspace <span>/</span>
             </span>{" "}
-            Your city
+            Research outpost
           </div>
           <div className="top-status">
             <span
@@ -405,53 +497,64 @@ function App() {
           </div>
         </header>
         <div className="page-heading">
-          <div className="eyebrow">BUILD SOMETHING THAT LASTS</div>
+          <div className="eyebrow">MISSION CONTROL / LOCAL WORKSPACE</div>
           <div className="heading-row">
             <div>
               <h1>
-                Your projects, taking shape<span>.</span>
+                A habitat for every idea<span>.</span>
               </h1>
-              <p>A living workspace. Real agents. One building at a time.</p>
+              <p>
+                Big project districts. Small work sites. A crew that brings them
+                to life.
+              </p>
             </div>
             <button className="primary" onClick={() => setAdding(true)}>
-              ＋ Connect repository
+              <Icon name="plus" size={16} /> Connect repository
             </button>
           </div>
         </div>
         <section className="stats" aria-label="Workspace statistics">
           <div>
-            <span className="stat-icon">▥</span>
+            <span className="stat-icon">
+              <Icon name="city" />
+            </span>
             <span>
               <strong>{projects.length.toString().padStart(2, "0")}</strong>
-              <small>Projects in your city</small>
+              <small>Project districts</small>
             </span>
           </div>
           <div>
-            <span className="stat-icon amber">⚒</span>
+            <span className="stat-icon amber">
+              <Icon name="workers" />
+            </span>
             <span>
               <strong>{activeWorkers.toString().padStart(2, "0")}</strong>
               <small>Workers on site</small>
             </span>
           </div>
           <div>
-            <span className="stat-icon green">✓</span>
+            <span className="stat-icon green">
+              <Icon name="city" />
+            </span>
             <span>
               <strong>
-                {projects
-                  .reduce((n, p) => n + p.successes, 0)
-                  .toString()
-                  .padStart(2, "0")}
+                {String(state?.habitats?.length || 0).padStart(2, "0")}
               </strong>
-              <small>Tasks completed</small>
+              <small>Task habitats</small>
             </span>
           </div>
           <div className="city-note">
-            <span>✦</span>
-            <p>
-              Small tasks.
-              <br />
-              <strong>Lasting foundations.</strong>
-            </p>
+            <span className="stat-icon violet">
+              <Icon name="eye" />
+            </span>
+            <span>
+              <strong>
+                {String(
+                  state?.observedChats?.filter((c) => c.connected).length || 0,
+                ).padStart(2, "0")}
+              </strong>
+              <small>Chats connected</small>
+            </span>
           </div>
         </section>
         {error && (
@@ -478,9 +581,13 @@ function App() {
           <button
             className="watch-linkbar"
             onClick={() => {
-              const c = state.observedChats!.at(-1)!;
+              const c = currentObservedChat(state.observedChats)!;
               const p = projects.find((p) => p.id === c.projectId);
               select(c.projectId);
+              if (c.habitatId) {
+                setSelectedHabitat(c.habitatId);
+                setFocusHabitat(c.habitatId);
+              }
               if (p) {
                 setFocus(p.plot);
                 setReset((x) => x + 1);
@@ -488,16 +595,16 @@ function App() {
             }}
           >
             ◉ Watching your Codex chat{" "}
-            <span>{state.observedChats.at(-1)!.name}</span>
-            <strong>View work in the city →</strong>
+            <span>{currentObservedChat(state.observedChats)!.name}</span>
+            <strong>Visit the work site →</strong>
           </button>
         )}
         <section className={`city-shell ${project ? "with-panel" : ""}`}>
           <div className="world">
             <div className="world-top">
               <span>
-                <span className="live-dot" /> CITY VIEW{" "}
-                <small>01 / YOUR NEIGHBORHOOD</small>
+                <span className="live-dot" /> OUTPOST VIEW{" "}
+                <small>PROJECT DISTRICTS / HABITAT SITES</small>
               </span>
               <div>
                 <button
@@ -505,6 +612,7 @@ function App() {
                   aria-label="Reset city camera"
                   onClick={() => {
                     setFocus(undefined);
+                    setFocusHabitat(undefined);
                     setReset((x) => x + 1);
                   }}
                 >
@@ -525,7 +633,10 @@ function App() {
               projects={projects}
               tasks={tasks}
               selected={selected}
-              onSelect={select}
+              onSelect={(id) => {
+                select(id);
+                setTab("Habitats");
+              }}
               onWorker={setWorker}
               motion={motion}
               simple={simple}
@@ -535,6 +646,10 @@ function App() {
               pan={pan}
               cameraCommand={cameraCommand}
               observedChats={state?.observedChats}
+              habitats={state?.habitats}
+              selectedHabitat={selectedHabitat}
+              focusHabitat={focusHabitat}
+              onSelectHabitat={visitHabitat}
             />
             {!projects.length && (
               <div className="city-welcome">
@@ -603,7 +718,8 @@ function App() {
             )}
             <div className="world-bottom">
               <span>
-                {pan ? "Drag to move" : "Drag to orbit"} <i /> Scroll to zoom
+                {pan ? "Drag to move" : "Drag to orbit"} <i /> WASD / arrows{" "}
+                <i /> Scroll to zoom
               </span>
               <label>
                 <input
@@ -622,10 +738,66 @@ function App() {
             </div>
           </div>
           {project && (
-            <aside className="detail-panel">
+            <aside
+              className="detail-panel"
+              style={
+                { "--panel-width": `${panelWidth}px` } as React.CSSProperties
+              }
+            >
+              <div
+                className="panel-resizer"
+                role="separator"
+                aria-label="Resize project panel"
+                aria-orientation="vertical"
+                aria-valuemin={350}
+                aria-valuemax={620}
+                aria-valuenow={panelWidth}
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+                    e.preventDefault();
+                    const width = Math.max(
+                      350,
+                      Math.min(
+                        620,
+                        panelWidth + (e.key === "ArrowLeft" ? 20 : -20),
+                      ),
+                    );
+                    setPanelWidth(width);
+                    localStorage.setItem("city-panel-width", String(width));
+                  }
+                }}
+                onPointerDown={(e) => {
+                  resize.current = { x: e.clientX, width: panelWidth };
+                  e.currentTarget.setPointerCapture(e.pointerId);
+                  e.preventDefault();
+                }}
+                onPointerMove={(e) => {
+                  if (resize.current)
+                    setPanelWidth(
+                      Math.max(
+                        350,
+                        Math.min(
+                          620,
+                          resize.current.width + resize.current.x - e.clientX,
+                        ),
+                      ),
+                    );
+                }}
+                onPointerUp={(e) => {
+                  resize.current = undefined;
+                  e.currentTarget.releasePointerCapture(e.pointerId);
+                  localStorage.setItem("city-panel-width", String(panelWidth));
+                }}
+                onPointerCancel={() => {
+                  resize.current = undefined;
+                }}
+              >
+                <span />
+              </div>
               <div className="panel-header">
                 <div className="eyebrow">
-                  PROJECT WORKSHOP <span>LEVEL {level(project.successes)}</span>
+                  PROJECT DISTRICT <span>LEVEL {level(project.successes)}</span>
                 </div>
                 <div className="panel-title">
                   <h2>{project.name}</h2>
@@ -644,10 +816,11 @@ function App() {
                   <button
                     onClick={() => {
                       setFocus(project.plot);
+                      setFocusHabitat(undefined);
                       setReset((x) => x + 1);
                     }}
                   >
-                    ◎ Focus building
+                    ◎ Focus district
                   </button>
                   <button
                     onClick={() =>
@@ -660,6 +833,16 @@ function App() {
                   </button>
                 </div>
               </div>
+              <button
+                className="habitats-overview"
+                onClick={() => setTab("Habitats")}
+              >
+                <span>⌒ {projectHabitats.length} habitats</span>
+                <small>
+                  {projectHabitats.reduce((n, h) => n + h.members.length, 0)}{" "}
+                  assignments · Manage sites →
+                </small>
+              </button>
               {observed && (
                 <div className="watch-mode">
                   <button
@@ -677,31 +860,56 @@ function App() {
                 </div>
               )}
               <div className="tabs" role="tablist">
-                {["Chat", "Activity", "Changes", "Checks", "History"].map(
-                  (t) => (
-                    <button
-                      role="tab"
-                      aria-selected={tab === t}
-                      key={t}
-                      onClick={() => setTab(t)}
-                    >
-                      {t}
-                      {t === "Checks" &&
-                      task?.checks.some((c) => c.status === "failed")
-                        ? " !"
-                        : ""}
-                    </button>
-                  ),
-                )}
+                {[
+                  "Habitats",
+                  "Chat",
+                  "Activity",
+                  "Changes",
+                  "Checks",
+                  "History",
+                ].map((t) => (
+                  <button
+                    role="tab"
+                    aria-selected={tab === t}
+                    key={t}
+                    onClick={() => setTab(t)}
+                  >
+                    {t}
+                    {t === "Checks" &&
+                    task?.checks.some((c) => c.status === "failed")
+                      ? " !"
+                      : ""}
+                  </button>
+                ))}
               </div>
               <div className="panel-content">
-                {watching && observed && (
+                {tab === "Habitats" && (
+                  <HabitatsPanel
+                    projectId={project.id}
+                    habitats={projectHabitats}
+                    tasks={projectTasks}
+                    chats={
+                      state?.observedChats?.filter(
+                        (c) => c.projectId === project.id,
+                      ) || []
+                    }
+                    selected={selectedHabitat}
+                    onSelect={(id) => visitHabitat(id)}
+                    send={send}
+                    onOpenTask={(id) => {
+                      setTaskId(id);
+                      setCityExecution(true);
+                      setTab("Chat");
+                    }}
+                  />
+                )}
+                {watching && observed && tab !== "Habitats" && (
                   <WatchedChat chat={observed} tab={tab} />
                 )}
                 {requests.map((r) => (
                   <RequestCard key={r.id} request={r} send={send} />
                 ))}
-                {task && !watching && (
+                {task && !watching && tab !== "Habitats" && (
                   <div className="task-summary">
                     <Badge status={task.status} />
                     <span>
@@ -995,6 +1203,23 @@ function App() {
                     onChange={(e) => setPrompt(e.target.value)}
                     disabled={busy}
                   />
+                  <label className="habitat-target">
+                    Work site
+                    <select
+                      aria-label="Task habitat"
+                      value={habitatPreference}
+                      onChange={(e) => setHabitatPreference(e.target.value)}
+                    >
+                      <option value="">
+                        Auto · match related work or create a dome
+                      </option>
+                      {projectHabitats.map((h) => (
+                        <option key={h.id} value={h.id}>
+                          {h.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                   <div className="composer-bottom">
                     <label>
                       <select

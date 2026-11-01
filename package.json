@@ -15,7 +15,9 @@
     "format": "prettier --write src server shared tests scripts docs README.md",
     "test:recovery": "tsx scripts/recovery.ts",
     "test:visual": "tsx scripts/city-visual-qa.ts",
-    "test:watch": "tsx --env-file-if-exists=.env scripts/mirror-browser.ts"
+    "test:watch": "tsx --env-file-if-exists=.env scripts/mirror-browser.ts",
+    "test:ui": "tsx scripts/ui-qa.ts",
+    "test:outpost": "tsx scripts/outpost-qa.ts"
   },
   "dependencies": {
     "@react-three/drei": "^10.0.0",
