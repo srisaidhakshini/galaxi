@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { z } from "zod";
 import { Codex, textInput, type RpcMessage } from "./codex.ts";
 import { Store } from "./store.ts";
+import { assignTaskHabitat } from "../shared/habitats.ts";
 import * as git from "./git.ts";
 import {
   terminal,
@@ -145,6 +146,7 @@ export class Controller {
     prompt: string,
     concurrency = 2,
     attemptOf?: string,
+    habitatId?: string,
   ) {
     if (!this.runtime.ready || !this.store.state.runtime.authenticated)
       throw new Error(
@@ -191,6 +193,10 @@ export class Controller {
         cwd: t.workspace,
         status: "pending",
       }));
+      const retryHabitat = this.store.state.tasks.find(
+        (x) => x.id === attemptOf && x.projectId === projectId,
+      )?.habitatId;
+      assignTaskHabitat(this.store.state, t, habitatId || retryHabitat);
       this.store.state.tasks.push(t);
       this.abort.set(t.id, new AbortController());
       this.event(

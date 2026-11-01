@@ -5,6 +5,7 @@ import { z } from "zod";
 import { Store } from "./store.ts";
 import { Controller } from "./controller.ts";
 import { ChatObserver } from "./observer.ts";
+import { createHabitat, moveHabitatMember } from "../shared/habitats.ts";
 const port = Number(process.env.PORT || 4310),
   origin = `http://127.0.0.1:${port}`;
 const store = new Store(
@@ -134,9 +135,62 @@ app.post(
         prompt: z.string().min(1).max(30000),
         concurrency: z.number().int().min(1).max(2).default(2),
         attemptOf: z.string().uuid().optional(),
+        habitatId: z.string().uuid().optional(),
       })
       .parse(req.body);
-    return controller.start(b.projectId, b.prompt, b.concurrency, b.attemptOf);
+    return controller.start(
+      b.projectId,
+      b.prompt,
+      b.concurrency,
+      b.attemptOf,
+      b.habitatId,
+    );
+  }),
+);
+app.post(
+  "/api/habitats",
+  route(async (req) => {
+    const b = z
+      .object({
+        projectId: z.string().uuid(),
+        name: z.string().trim().min(1).max(60),
+      })
+      .parse(req.body);
+    const h = createHabitat(store.state, b.projectId, b.name);
+    controller.publish();
+    return h;
+  }),
+);
+app.post(
+  "/api/habitats/:id",
+  route(async (req) => {
+    const b = z
+      .object({ name: z.string().trim().min(1).max(60) })
+      .parse(req.body);
+    const h = store.state.habitats?.find((h) => h.id === String(req.params.id));
+    if (!h) throw Error("Unknown habitat");
+    h.name = b.name;
+    controller.publish();
+    return h;
+  }),
+);
+app.post(
+  "/api/habitats/:id/assign",
+  route(async (req) => {
+    const b = z
+      .object({
+        kind: z.enum(["task", "chat"]),
+        memberId: z.string().min(1).max(200),
+      })
+      .parse(req.body);
+    const h = moveHabitatMember(
+      store.state,
+      String(req.params.id),
+      b.kind,
+      b.memberId,
+    );
+    controller.publish();
+    return h;
   }),
 );
 app.post(

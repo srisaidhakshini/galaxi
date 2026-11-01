@@ -37,6 +37,7 @@ export interface Worker {
   observedItemId?: string;
 }
 export interface ObservedChat {
+  sourceUpdatedAt?: number;
   threadId: string;
   turnId?: string;
   projectId: string;
@@ -46,6 +47,8 @@ export interface ObservedChat {
   checkedAt?: string;
   changedAt?: string;
   workObservedAt?: string;
+  habitatId?: string;
+  habitatHistoryLoaded?: boolean;
   error?: string;
   worker: Worker;
   activity: {
@@ -86,6 +89,28 @@ export interface Task {
   plan?: string;
   concurrency: number;
   attemptOf?: string;
+  habitatId?: string;
+}
+export interface HabitatMember {
+  id: string;
+  kind: "task" | "chat";
+  prompt: string;
+  createdAt: string;
+  threadId?: string;
+  turnId?: string;
+}
+export interface Habitat {
+  chatThreadId?: string;
+  /** Scene construction stages: 0 land, 1 foundation, 2 frame, 3 glass, 4 door, 5 finished. */
+  constructionStage?: number;
+  constructionEvidence?: string[];
+  id: string;
+  projectId: string;
+  name: string;
+  plot: number;
+  createdAt: string;
+  topics: string[];
+  members: HabitatMember[];
 }
 export interface CityEvent {
   id: number;
@@ -105,11 +130,13 @@ export interface PendingRequest {
   params: any;
 }
 export interface Snapshot {
+  ignoredChatIds?: string[];
   projects: Project[];
   tasks: Task[];
   requests: PendingRequest[];
   events: CityEvent[];
   observedChats?: ObservedChat[];
+  habitats?: Habitat[];
   runtime: {
     connected: boolean;
     authenticated: boolean;
@@ -173,4 +200,22 @@ export function canSucceed(task: Task) {
     task.checks.every((c) => c.status === "passed") &&
     !task.error
   );
+}
+
+/** Prefer live work, then the most recently updated chat, without mutating snapshot order. */
+export function currentObservedChat(chats: ObservedChat[] = []) {
+  const busy = (c: ObservedChat) =>
+    [
+      "editing",
+      "checking",
+      "running commands",
+      "inspecting",
+      "planning",
+    ].includes(c.worker.status)
+      ? 1
+      : 0;
+  return [...chats].sort(
+    (a, b) =>
+      busy(b) - busy(a) || (b.sourceUpdatedAt || 0) - (a.sourceUpdatedAt || 0),
+  )[0];
 }

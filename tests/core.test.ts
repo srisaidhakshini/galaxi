@@ -281,6 +281,8 @@ async function finished(t: Task) {
 }
 test("isolated concurrent workers integrate, pass checks, award once and explicitly apply", async () => {
   const { root, s, c, fake, p } = await fixture();
+  // Keep fake turns alive long enough to overlap despite real Git worktree setup.
+  fake.delay=500;
   const original = await git(root, "rev-parse", "HEAD");
   const t = await c.start(p.id, "Implement two outputs", 2);
   await finished(t);

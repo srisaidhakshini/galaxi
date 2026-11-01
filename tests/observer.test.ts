@@ -13,6 +13,8 @@ class ReadOnlyRuntime {
   ready = true;
   calls: string[] = [];
   status = "interrupted";
+  turnId = "turn";
+  chats = [{ id: "chat", name: "Current chat", updatedAt: 1 }];
   items: any[] = [
     {
       id: "prompt",
@@ -39,10 +41,9 @@ class ReadOnlyRuntime {
           name: "Current chat",
         },
       };
-    if (method === "thread/list")
-      return { data: [{ id: "chat", name: "Current chat", updatedAt: 1 }] };
+    if (method === "thread/list") return { data: this.chats };
     if (method === "thread/turns/list")
-      return { data: [{ id: "turn", status: this.status }] };
+      return { data: [{ id: this.turnId, status: this.status }] };
     return {
       data: (params.sortDirection === "desc"
         ? [...this.items].reverse()
@@ -198,4 +199,104 @@ test("prompt view removes ambient UI wrappers without changing the user request"
     ],
   });
   assert.equal(result?.message, "Build this feature");
+});
+
+test("new prompts create land without importing history and construction survives restart", async () => {
+  const { store, runtime, observer } = fixture();
+  const c = await observer.watch("chat", "p");
+  assert.equal(store.state.habitats?.length || 0, 0);
+  runtime.turnId = "new-turn";
+  runtime.items = [
+    {
+      id: "new-prompt",
+      type: "userMessage",
+      content: [{ type: "text", text: "Add weather sensors" }],
+    },
+  ];
+  await observer.poll();
+  assert.equal(store.state.habitats!.length, 1);
+  const habitat = store.state.habitats![0];
+  assert.equal(habitat.constructionStage, 0);
+  runtime.items.push({
+    id: "edit-1",
+    type: "fileChange",
+    status: "completed",
+    changes: [{ path: "sensor.ts", kind: { type: "add" }, diff: "sensor" }],
+  });
+  await observer.poll();
+  assert.equal(habitat.constructionStage, 1);
+  await observer.poll();
+  assert.equal(habitat.constructionStage, 1);
+  runtime.status = "completed";
+  runtime.items.push({ id: "answer", type: "agentMessage", text: "Done" });
+  await observer.poll();
+  assert.equal(habitat.constructionStage, 5);
+  runtime.turnId = "related-turn";
+  runtime.status = "inProgress";
+  runtime.items = [
+    {
+      id: "related-prompt",
+      type: "userMessage",
+      content: [{ type: "text", text: "Add weather sensors" }],
+    },
+    {
+      id: "related-edit",
+      type: "fileChange",
+      status: "completed",
+      changes: [{ path: "sensor.ts", kind: { type: "update" }, diff: "more" }],
+    },
+  ];
+  await observer.poll();
+  assert.equal(c.habitatId, habitat.id);
+  assert.equal(habitat.constructionStage, 5);
+  const count = store.state.habitats!.length;
+  runtime.turnId = "next-turn";
+  runtime.status = "inProgress";
+  runtime.items = [
+    {
+      id: "p2",
+      type: "userMessage",
+      content: [{ type: "text", text: "Build authentication login" }],
+    },
+  ];
+  await observer.poll();
+  assert.equal(store.state.habitats!.length, count);
+  assert.equal(habitat.constructionStage, 5);
+  const path = store.db.location()!;
+  store.save();
+  store.db.close();
+  const recovered = new Store(path);
+  assert.equal(
+    recovered.state.habitats!.find((h) => h.id === habitat.id)!
+      .constructionStage,
+    5,
+  );
+  assert.equal(recovered.state.habitats!.length, count);
+  recovered.db.close();
+});
+
+test("project discovery attaches both chats with one dome each and respects stop watching", async () => {
+  const { store, runtime, observer } = fixture();
+  runtime.status = "completed";
+  runtime.items.push({ id: "answer", type: "agentMessage", text: "Done" });
+  runtime.chats.push({ id: "second", name: "Second chat", updatedAt: 2 });
+  await observer.discover();
+  assert.equal(store.state.observedChats!.length, 2);
+  assert.equal(store.state.habitats!.length, 2);
+  assert.equal(
+    new Set(store.state.habitats!.map((h) => h.chatThreadId)).size,
+    2,
+  );
+  assert.ok(store.state.habitats!.every((h) => h.constructionStage === 5));
+  await observer.discover();
+  assert.equal(store.state.habitats!.length, 2);
+  observer.unwatch("second");
+  await observer.discover();
+  assert.equal(store.state.observedChats!.length, 1);
+  assert.ok(store.state.ignoredChatIds!.includes("second"));
+  assert.equal(store.state.tasks.length, 0);
+  assert.ok(
+    runtime.calls.every((m) => !m.includes("start") && !m.includes("resume")),
+  );
+  store.db.close();
 });

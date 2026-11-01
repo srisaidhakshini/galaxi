@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import type { ObservedChat, Worker } from "../shared/domain.ts";
 import type { Store } from "./store.ts";
 import { repository } from "./git.ts";
+import { assignChatHabitat } from "../shared/habitats.ts";
 
 export interface Reader {
   ready: boolean;
@@ -88,6 +89,7 @@ export class ChatObserver {
   timer?: NodeJS.Timeout;
   polling = false;
   fingerprints = new Map<string, string>();
+  lastDiscovery = 0;
   constructor(
     public store: Store,
     public reader: Reader,
@@ -147,6 +149,9 @@ export class ChatObserver {
       (c) => c.threadId === threadId,
     );
     if (exists) return exists;
+    this.store.state.ignoredChatIds = this.store.state.ignoredChatIds?.filter(
+      (id) => id !== threadId,
+    );
     if (this.store.state.observedChats!.length >= 8)
       throw Error("Watch at most eight chats at a time");
     const chat: ObservedChat = {
@@ -175,6 +180,9 @@ export class ChatObserver {
     return chat;
   }
   unwatch(threadId: string) {
+    this.store.state.ignoredChatIds = [
+      ...new Set([...(this.store.state.ignoredChatIds || []), threadId]),
+    ];
     this.store.state.observedChats = this.store.state.observedChats!.filter(
       (c) => c.threadId !== threadId,
     );
@@ -189,10 +197,57 @@ export class ChatObserver {
   stop() {
     clearInterval(this.timer);
   }
+  async discover() {
+    for (const project of [...this.store.state.projects]) {
+      let chats: Awaited<ReturnType<ChatObserver["list"]>>;
+      try {
+        chats = await this.list(project.id);
+      } catch {
+        continue;
+      }
+      for (const candidate of chats) {
+        const known = this.store.state.observedChats!.find(
+          (c) => c.threadId === candidate.id,
+        );
+        if (known) known.sourceUpdatedAt = candidate.updatedAt;
+        if (
+          this.store.state.observedChats!.some(
+            (c) => c.threadId === candidate.id,
+          ) ||
+          this.store.state.ignoredChatIds?.includes(candidate.id) ||
+          this.store.state.tasks.some((t) =>
+            t.workers.some((w) => w.threadId === candidate.id),
+          )
+        )
+          continue;
+        if (this.store.state.observedChats!.length >= 8) break;
+        try {
+          const chat = await this.watch(candidate.id, project.id);
+          chat.sourceUpdatedAt = candidate.updatedAt;
+          // One building for an existing chat, never one per historical prompt.
+          if (chat.turnId && chat.prompt) {
+            const home = assignChatHabitat(
+              this.store.state,
+              chat,
+              chat.turnId,
+              chat.prompt,
+            );
+            if (chat.worker.status === "completed") home.constructionStage = 5;
+          }
+        } catch {
+          /* A disappearing or mismatched chat must not block other projects. */
+        }
+      }
+    }
+  }
   async poll() {
     if (this.polling || !this.reader.ready) return;
     this.polling = true;
     try {
+      if (Date.now() - this.lastDiscovery >= 30000) {
+        this.lastDiscovery = Date.now();
+        await this.discover();
+      }
       for (const c of [...this.store.state.observedChats!])
         await this.pollChat(c);
       if (this.store.state.observedChats!.length) this.publish();
@@ -210,10 +265,14 @@ export class ChatObserver {
       });
       const turn = turns.data[0];
       if (!turn) {
+        chat.habitatHistoryLoaded = true;
         chat.connected = true;
         chat.worker.status = "idle";
         return;
       }
+      // Establish a baseline without turning older history into new buildings.
+      const newPrompt = !!chat.habitatHistoryLoaded && chat.turnId !== turn.id;
+      chat.habitatHistoryLoaded = true;
       if (chat.turnId !== turn.id) {
         const first = await this.reader.call("thread/items/list", {
           threadId: chat.threadId,
@@ -227,6 +286,17 @@ export class ChatObserver {
             .find((a: any) => a?.kind === "userMessage")?.message || "";
         chat.turnId = turn.id;
       }
+      if (newPrompt) chat.habitatId = undefined;
+      if (chat.prompt && newPrompt)
+        assignChatHabitat(
+          this.store.state,
+          chat,
+          turn.id,
+          chat.prompt,
+          turn.startedAt
+            ? new Date(turn.startedAt * 1000).toISOString()
+            : new Date().toISOString(),
+        );
       const items = await this.reader.call("thread/items/list", {
         threadId: chat.threadId,
         turnId: turn.id,
@@ -237,6 +307,29 @@ export class ChatObserver {
         .map((e: any) => describeRecordedItem(e.item))
         .filter(Boolean)
         .reverse() as ObservedChat["activity"];
+      const habitat = this.store.state.habitats?.find(
+        (h) => h.id === chat.habitatId,
+      );
+      if (habitat) {
+        const evidence = (habitat.constructionEvidence ??= []);
+        for (const item of activity.filter(
+          (a) => a.kind === "fileChange" && a.status === "completed",
+        )) {
+          const key = turn.id + "/" + item.id;
+          if (!evidence.includes(key)) {
+            evidence.push(key);
+            habitat.constructionStage = Math.max(
+              habitat.constructionStage ?? 0,
+              Math.min(4, (habitat.constructionStage ?? 0) + 1),
+            );
+          }
+        }
+        if (
+          turn.status === "completed" &&
+          activity.some((a) => a.kind === "agentMessage")
+        )
+          habitat.constructionStage = 5;
+      }
       const fingerprint = JSON.stringify(activity);
       const baseline = initial || !this.fingerprints.has(chat.threadId);
       const changed = this.fingerprints.get(chat.threadId) !== fingerprint;

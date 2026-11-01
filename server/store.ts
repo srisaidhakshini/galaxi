@@ -3,6 +3,7 @@ import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Snapshot, Task, CityEvent } from "../shared/domain.ts";
 import { canSucceed, terminal, transition } from "../shared/domain.ts";
+import { ensureHabitats } from "../shared/habitats.ts";
 export class Store {
   db: DatabaseSync;
   state: Snapshot;
@@ -25,6 +26,7 @@ export class Store {
           runtime: { connected: false, authenticated: false, mode: "real" },
         };
     this.state.events = [];
+    ensureHabitats(this.state);
     this.state.requests = [];
     for (const t of this.state.tasks) {
       if (!terminal(t.status)) {
@@ -44,6 +46,21 @@ export class Store {
     this.save();
   }
   save() {
+    for (const h of this.state.habitats || []) {
+      const tasks = this.state.tasks.filter((t) => t.habitatId === h.id);
+      const stage = tasks.some((t) => t.status === "succeeded")
+        ? 5
+        : tasks.some((t) => t.status === "checking")
+          ? 4
+          : tasks.some((t) => t.status === "integrating")
+            ? 3
+            : tasks.some((t) => t.workers.some((w) => w.status === "editing"))
+              ? 2
+              : tasks.some((t) => t.status === "running")
+                ? 1
+                : 0;
+      h.constructionStage = Math.max(h.constructionStage ?? 0, stage);
+    }
     this.db
       .prepare(
         "INSERT INTO snapshots(id,data) VALUES(1,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data",
