@@ -3,4 +3,3 @@ dist/
 .local/
 playwright-report/
 test-results/
-config.bat
