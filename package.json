@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node init && tsx --env-file-if-exists=.env server/index.ts",
-    "build": "node init && tsc --noEmit && vite build",
-    "start": "node init && tsx --env-file-if-exists=.env server/index.ts --production",
+    "dev": "tsx --env-file-if-exists=.env server/index.ts",
+    "build": "tsc --noEmit && vite build",
+    "start": "tsx --env-file-if-exists=.env server/index.ts --production",
     "test": "tsx --test tests/*.test.ts",
     "spike": "tsx scripts/spike.ts",
     "test:e2e": "tsx scripts/e2e.ts",
