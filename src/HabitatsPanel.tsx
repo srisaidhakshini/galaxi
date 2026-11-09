@@ -7,6 +7,7 @@ import {
 import { useEffect, useState } from "react";
 import type { Habitat, Task, ObservedChat } from "../shared/domain";
 export function HabitatsPanel({
+  readOnly = false,
   projectId,
   habitats,
   tasks,
@@ -16,6 +17,7 @@ export function HabitatsPanel({
   send,
   onOpenTask,
 }: {
+  readOnly?: boolean;
   projectId: string;
   habitats: Habitat[];
   tasks: Task[];
@@ -42,28 +44,30 @@ export function HabitatsPanel({
           on the same building.
         </p>
       </div>
-      <form
-        className="new-habitat"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          const h = await send("/habitats", { projectId, name });
-          if (h) {
-            setName("");
-            onSelect(h.id);
-          }
-        }}
-      >
-        <input
-          aria-label="New habitat name"
-          placeholder="Reserve a site for your next prompt…"
-          value={name}
-          maxLength={60}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <button className="primary" disabled={!name.trim()}>
-          ＋ Reserve site
-        </button>
-      </form>
+      {!readOnly && (
+        <form
+          className="new-habitat"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const h = await send("/habitats", { projectId, name });
+            if (h) {
+              setName("");
+              onSelect(h.id);
+            }
+          }}
+        >
+          <input
+            aria-label="New habitat name"
+            placeholder="Reserve a site for your next prompt…"
+            value={name}
+            maxLength={60}
+            onChange={(e) => setName(e.target.value)}
+          />
+          <button className="primary" disabled={!name.trim()}>
+            ＋ Reserve site
+          </button>
+        </form>
+      )}
       <div className="habitat-list">
         {habitats.map((h) => {
           const running =
@@ -141,23 +145,25 @@ export function HabitatsPanel({
             }
             /8.
           </p>
-          <form
-            className="rename-habitat"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              await send(`/habitats/${active.id}`, { name: rename });
-            }}
-          >
-            <input
-              aria-label="Habitat name"
-              value={rename}
-              maxLength={60}
-              onChange={(e) => setRename(e.target.value)}
-            />
-            <button disabled={!rename.trim() || rename === active.name}>
-              Rename
-            </button>
-          </form>
+          {!readOnly && (
+            <form
+              className="rename-habitat"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                await send(`/habitats/${active.id}`, { name: rename });
+              }}
+            >
+              <input
+                aria-label="Habitat name"
+                value={rename}
+                maxLength={60}
+                onChange={(e) => setRename(e.target.value)}
+              />
+              <button disabled={!rename.trim() || rename === active.name}>
+                Rename
+              </button>
+            </form>
+          )}
           <p className="muted">
             Choose where each assignment belongs. Related work can share a
             habitat, and these choices persist across restarts.
@@ -182,7 +188,7 @@ export function HabitatsPanel({
                     View execution, changes and checks →
                   </button>
                 )}
-                {m.kind === "task" && (
+                {m.kind === "task" && !readOnly && (
                   <label>
                     Habitat
                     <select

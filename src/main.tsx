@@ -14,17 +14,16 @@ import {
   type Worker,
   type PendingRequest,
 } from "../shared/domain";
+import {
+  CompanionClient,
+  CompanionHttpError,
+  type CompanionConnection,
+} from "./companionClient";
+import { ConnectCompanion, BrowserConnections } from "./CompanionPanel";
 import "./style.css";
-let session = "";
+const companion = new CompanionClient();
 async function api(path: string, body?: unknown) {
-  const res = await fetch("/api" + path, {
-    method: body === undefined ? "GET" : "POST",
-    headers: { "Content-Type": "application/json", "X-City-Session": session },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Controller request failed");
-  return data;
+  return companion.request(path, body);
 }
 function Badge({ status }: { status: string }) {
   return (
@@ -142,6 +141,12 @@ function App() {
   const [state, setState] = useState<Snapshot>();
   const [error, setError] = useState("");
   const [connected, setConnected] = useState(false);
+  const [connection, setConnection] = useState<CompanionConnection>();
+  const [connectionEpoch, setConnectionEpoch] = useState(0);
+  const [connectionReason, setConnectionReason] = useState("");
+  const [connectionPhase, setConnectionPhase] = useState("Connecting");
+  const [managingConnections, setManagingConnections] = useState(false);
+  const readOnly = connection?.permission === "read";
   const [selected, setSelected] = useState(
     localStorage.getItem("city-project") || "",
   );
@@ -186,6 +191,7 @@ function App() {
   const resize = useRef<{ x: number; width: number } | undefined>(undefined);
   const cursor = useRef(0);
   const refreshing = useRef(false);
+  const networkError = useRef("");
   useEffect(() => {
     if (
       !state ||
@@ -204,8 +210,10 @@ function App() {
   async function refresh() {
     if (refreshing.current) return;
     refreshing.current = true;
+    const identity = companion.token;
     try {
       const s: Snapshot = await api("/state?after=" + cursor.current);
+      if (companion.token !== identity) return;
       setState((prev) => {
         const events = [...(prev?.events || []), ...s.events].filter(
           (e, i, all) => all.findIndex((x) => x.id === e.id) === i,
@@ -214,32 +222,87 @@ function App() {
         return { ...s, events };
       });
       setConnected(true);
+      if (networkError.current) {
+        const previous = networkError.current;
+        setError((value) => (value === previous ? "" : value));
+        networkError.current = "";
+      }
     } catch (e) {
+      if (companion.token !== identity) return;
+      if (e instanceof CompanionHttpError && e.status === 401) {
+        companion.forget();
+        setConnection(undefined);
+        setState(undefined);
+        setConnectionReason(
+          "Connection expired or revoked. Pair again from your local companion.",
+        );
+        setConnectionEpoch((n) => n + 1);
+      }
       setConnected(false);
-      setError(String(e));
+      setConnectionPhase("Reconnecting");
+      networkError.current = "Companion unavailable. Reconnecting…";
+      setError(networkError.current);
     } finally {
       refreshing.current = false;
     }
   }
   useEffect(() => {
-    let source: EventSource;
-    let timer: ReturnType<typeof setInterval>;
-    void api("/session")
-      .then((s) => {
-        session = s.token;
+    const abort = new AbortController();
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const wait = () =>
+      new Promise<void>((resolve) => {
+        const done = () => {
+          clearTimeout(t);
+          abort.signal.removeEventListener("abort", done);
+          resolve();
+        };
+        const t = setTimeout(done, 2000);
+        abort.signal.addEventListener("abort", done, { once: true });
+      });
+    void (async () => {
+      try {
+        const info = await companion.bootstrap(abort.signal);
+        if (abort.signal.aborted) return;
+        setConnection(info);
+        setConnectionReason("");
+        setConnectionPhase("Connected");
+        setConnected(true);
+        setError("");
         void refresh();
-        source = new EventSource("/api/events");
-        source.addEventListener("update", () => void refresh());
-        source.onerror = () => setConnected(false);
-        source.onopen = () => setConnected(true);
         timer = setInterval(() => void refresh(), 5000);
-      })
-      .catch((e) => setError(String(e)));
+        while (!abort.signal.aborted) {
+          try {
+            await companion.events(abort.signal, () => {
+              if (!abort.signal.aborted) {
+                setConnectionPhase("Connected");
+                void refresh();
+              }
+            });
+          } catch {
+            if (!abort.signal.aborted) {
+              setConnected(false);
+              setConnectionPhase("Reconnecting");
+              await wait();
+            }
+          }
+        }
+      } catch (e) {
+        if (!abort.signal.aborted) {
+          setConnection(undefined);
+          setConnected(false);
+          setConnectionPhase("Offline");
+          setConnectionReason(
+            (previous) =>
+              previous || (e instanceof Error ? e.message : String(e)),
+          );
+        }
+      }
+    })();
     return () => {
-      source?.close();
+      abort.abort();
       clearInterval(timer);
     };
-  }, []);
+  }, [connectionEpoch]);
   useEffect(() => {
     localStorage.setItem("city-project", selected);
     setTaskId("");
@@ -256,6 +319,7 @@ function App() {
       if (e.key === "Escape") {
         setAdding(false);
         setWatchPicker(false);
+        setManagingConnections(false);
         setWorker(undefined);
       }
     };
@@ -289,6 +353,12 @@ function App() {
   const events = (state?.events || []).filter((e) => e.taskId === task?.id);
   const requests = state?.requests.filter((r) => r.taskId === task?.id) || [];
   async function send(path: string, body: unknown) {
+    if (readOnly) {
+      setError(
+        "This browser has read-only access. Make changes from the local companion.",
+      );
+      return;
+    }
     setBusy(true);
     setError("");
     try {
@@ -354,8 +424,34 @@ function App() {
     (state?.observedChats?.filter(
       (c) => !["idle", "completed", "blocked"].includes(c.worker.status),
     ).length || 0);
+  async function disconnectBrowser() {
+    try {
+      await companion.disconnect();
+    } catch {
+    } finally {
+      cursor.current = 0;
+      setConnection(undefined);
+      setState(undefined);
+      setConnectionReason(
+        "Browser disconnected. Enter a new code to reconnect.",
+      );
+      setConnectionEpoch((n) => n + 1);
+    }
+  }
+  if (!connection)
+    return (
+      <ConnectCompanion
+        reason={connectionReason}
+        onConnect={async (address, code) => {
+          await companion.pair(address, code);
+          cursor.current = 0;
+          setState(undefined);
+          setConnectionEpoch((n) => n + 1);
+        }}
+      />
+    );
   return (
-    <div className="app">
+    <div className={"app " + (readOnly ? "paired-readonly" : "")}>
       <aside className="sidebar">
         <a className="brand" href="/" aria-label="Codex City home">
           <span className="brand-icon">
@@ -367,7 +463,7 @@ function App() {
           </span>
         </a>
         <div className="workspace-label">
-          YOUR WORKSPACE <span>LOCAL</span>
+          YOUR WORKSPACE <span>{readOnly ? "PAIRED" : "LOCAL"}</span>
         </div>
         <button className="nav-current" onClick={() => setSelected("")}>
           <Icon name="map" /> Outpost overview{" "}
@@ -378,6 +474,7 @@ function App() {
           <button
             title="Add project"
             aria-label="Add project"
+            disabled={readOnly}
             onClick={() => setAdding(true)}
           >
             <Icon name="plus" size={17} />
@@ -443,7 +540,11 @@ function App() {
             </p>
           )}
         </nav>
-        <button className="add-project" onClick={() => setAdding(true)}>
+        <button
+          className="add-project"
+          disabled={readOnly}
+          onClick={() => setAdding(true)}
+        >
           <Icon name="plus" size={15} /> Add project
         </button>
         <div className="sidebar-bottom">
@@ -465,10 +566,40 @@ function App() {
           </p>
           <button
             className="text-button"
+            disabled={readOnly}
             onClick={() => void send("/runtime/reconnect", {})}
           >
             <Icon name="refresh" size={12} /> Reconnect runtime
           </button>
+          {!readOnly && (
+            <button
+              className="text-button"
+              onClick={() => setManagingConnections(true)}
+            >
+              Browser connections
+            </button>
+          )}
+          {readOnly && (
+            <button className="text-button" onClick={disconnectBrowser}>
+              Disconnect browser
+            </button>
+          )}
+          {readOnly && !connected && (
+            <button
+              className="text-button"
+              onClick={() => {
+                companion.forget();
+                setConnection(undefined);
+                setState(undefined);
+                setConnectionReason(
+                  "Get a fresh code from your local companion to pair again.",
+                );
+                setConnectionEpoch((n) => n + 1);
+              }}
+            >
+              Pair again
+            </button>
+          )}
           <div className="user">
             <span>
               <Icon name="code" size={17} />
@@ -492,10 +623,41 @@ function App() {
             <span
               className={`status-dot ${connected ? "succeeded" : "failed"}`}
             />
-            {connected ? "Controller online" : "Controller disconnected"}
-            <span className="top-separator" /> <span>Local execution</span>
+            {connected ? "Companion connected" : connectionPhase}
+            <span className="connection-permission">
+              {readOnly ? "Read-only paired browser" : "Local companion"}
+            </span>
+            <span className="top-separator" />{" "}
+            <span>{readOnly ? "View only" : "Local execution"}</span>
           </div>
         </header>
+        <div className="mobile-connection-actions">
+          {readOnly ? (
+            <>
+              <button onClick={disconnectBrowser}>Disconnect browser</button>
+              {!connected && (
+                <button
+                  onClick={() => {
+                    companion.forget();
+                    cursor.current = 0;
+                    setConnection(undefined);
+                    setState(undefined);
+                    setConnectionReason(
+                      "Get a fresh code from your local companion.",
+                    );
+                    setConnectionEpoch((n) => n + 1);
+                  }}
+                >
+                  Pair again
+                </button>
+              )}
+            </>
+          ) : (
+            <button onClick={() => setManagingConnections(true)}>
+              Browser connections
+            </button>
+          )}
+        </div>
         <div className="page-heading">
           <div className="eyebrow">MISSION CONTROL / LOCAL WORKSPACE</div>
           <div className="heading-row">
@@ -508,7 +670,11 @@ function App() {
                 to life.
               </p>
             </div>
-            <button className="primary" onClick={() => setAdding(true)}>
+            <button
+              className="primary"
+              disabled={readOnly}
+              onClick={() => setAdding(true)}
+            >
               <Icon name="plus" size={16} /> Connect repository
             </button>
           </div>
@@ -810,7 +976,10 @@ function App() {
                 </div>
                 <p title={project.path}>{project.path}</p>
                 <div className="button-row">
-                  <button onClick={() => setWatchPicker(true)}>
+                  <button
+                    disabled={readOnly}
+                    onClick={() => setWatchPicker(true)}
+                  >
                     ◉ Watch Codex chat
                   </button>
                   <button
@@ -853,6 +1022,7 @@ function App() {
                   </button>
                   <button
                     aria-pressed={!watching}
+                    disabled={readOnly}
                     onClick={() => setCityExecution(true)}
                   >
                     Separate City task
@@ -885,6 +1055,7 @@ function App() {
               <div className="panel-content">
                 {tab === "Habitats" && (
                   <HabitatsPanel
+                    readOnly={readOnly}
                     projectId={project.id}
                     habitats={projectHabitats}
                     tasks={projectTasks}
@@ -906,9 +1077,10 @@ function App() {
                 {watching && observed && tab !== "Habitats" && (
                   <WatchedChat chat={observed} tab={tab} />
                 )}
-                {requests.map((r) => (
-                  <RequestCard key={r.id} request={r} send={send} />
-                ))}
+                {!readOnly &&
+                  requests.map((r) => (
+                    <RequestCard key={r.id} request={r} send={send} />
+                  ))}
                 {task && !watching && tab !== "Habitats" && (
                   <div className="task-summary">
                     <Badge status={task.status} />
@@ -1029,7 +1201,8 @@ function App() {
                           {task.diff ||
                             "No recorded diff yet. Changes are captured after integration or when execution stops."}
                         </pre>
-                        {task.status === "succeeded" &&
+                        {!readOnly &&
+                          task.status === "succeeded" &&
                           !task.applied &&
                           (applyConfirm ? (
                             <div className="request">
@@ -1138,7 +1311,18 @@ function App() {
                   </>
                 )}
               </div>
-              {watching && observed ? (
+              {readOnly ? (
+                <div className="watch-footer">
+                  <strong>Read-only connection</strong>
+                  <p>
+                    Keep working in Codex. Changes appear here automatically.
+                  </p>
+                  <small>
+                    Expires{" "}
+                    {new Date(connection.expiresAt).toLocaleTimeString()}
+                  </small>
+                </div>
+              ) : watching && observed ? (
                 <div className="watch-footer">
                   <strong>Keep prompting in Codex.</strong>
                   <p>
@@ -1275,6 +1459,12 @@ function App() {
           <span>Built with intention. Powered by Codex.</span>
         </footer>
       </main>
+      {managingConnections && !readOnly && (
+        <BrowserConnections
+          api={api}
+          onClose={() => setManagingConnections(false)}
+        />
+      )}
       {watchPicker && project && (
         <WatchDialog
           project={project}
