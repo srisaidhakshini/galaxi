@@ -1,11 +1,11 @@
 import express from "express";
-import { randomBytes, timingSafeEqual } from "node:crypto";
 import { resolve } from "node:path";
 import { z } from "zod";
 import { Store } from "./store.ts";
 import { Controller } from "./controller.ts";
 import { ChatObserver } from "./observer.ts";
 import { createHabitat, moveHabitatMember } from "../shared/habitats.ts";
+import { installPairing, type Connection } from "./pairing.ts";
 const port = Number(process.env.PORT || 4310),
   origin = `http://127.0.0.1:${port}`;
 const store = new Store(
@@ -16,49 +16,7 @@ const observer = new ChatObserver(store, controller.runtime, () =>
   controller.publish(),
 );
 const app = express();
-const sessions = new Set<string>();
-app.use((req, res, next) => {
-  if (!["127.0.0.1", `127.0.0.1:${port}`].includes(req.headers.host || ""))
-    return res.status(403).json({ error: "Invalid host" });
-  if (req.headers.origin && req.headers.origin !== origin)
-    return res.status(403).json({ error: "Invalid origin" });
-  res.setHeader("X-Content-Type-Options", "nosniff");
-  res.setHeader("Referrer-Policy", "no-referrer");
-  next();
-});
-app.use(express.json({ limit: "64kb" }));
-app.get("/api/session", (req, res) => {
-  if (req.headers["sec-fetch-site"] === "cross-site")
-    return res.sendStatus(403);
-  const token = randomBytes(32).toString("hex");
-  if (sessions.size > 100) sessions.clear();
-  sessions.add(token);
-  res.cookie("city_session", token, {
-    httpOnly: true,
-    sameSite: "strict",
-    path: "/",
-  });
-  res.setHeader("Cache-Control", "no-store");
-  res.json({ token });
-});
-app.use("/api", (req, res, next) => {
-  const cookie = String(req.headers.cookie || "").match(
-    /(?:^|; )city_session=([a-f0-9]{64})/,
-  )?.[1];
-  const token = String(req.headers["x-city-session"] || "");
-  if (!cookie || !sessions.has(cookie))
-    return res
-      .status(401)
-      .json({ error: "Reload to establish a local session" });
-  if (
-    req.method !== "GET" &&
-    (token.length !== cookie.length ||
-      !timingSafeEqual(Buffer.from(token), Buffer.from(cookie)))
-  )
-    return res.status(403).json({ error: "Invalid local session token" });
-  res.setHeader("Cache-Control", "no-store");
-  next();
-});
+const security = installPairing(app, origin);
 app.get("/api/state", (req, res) =>
   res.json(store.snapshot(Number(req.query.after) || 0)),
 );
@@ -66,11 +24,24 @@ app.get("/api/events", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.flushHeaders();
-  const notify = () => res.write("event: update\ndata: {}\n\n");
+  const connection = res.locals.connection as Connection;
+  const notify = () => {
+    if (security.isLive(connection)) res.write("event: update\ndata: {}\n\n");
+    else res.end();
+  };
+  const expires = setTimeout(
+    () => res.end(),
+    Math.max(0, connection.expiresAt - Date.now()),
+  );
+  const off = security.onRevoke((id) => {
+    if (id === connection.id) res.end();
+  });
   controller.listeners.add(notify);
   const timer = setInterval(() => res.write(": keepalive\n\n"), 15000);
   req.on("close", () => {
     clearInterval(timer);
+    clearTimeout(expires);
+    off();
     controller.listeners.delete(notify);
   });
   notify();

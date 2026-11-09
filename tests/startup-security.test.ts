@@ -112,6 +112,169 @@ test(
         ).status,
         400,
       );
+      const website = "https://city.example";
+      const localHeaders = {
+        Cookie: cookie,
+        "X-City-Session": token,
+        "Content-Type": "application/json",
+      };
+      const unknown = await fetch(origin + "/api/state", {
+        headers: { Origin: website },
+      });
+      assert.equal(unknown.status, 403);
+      assert.equal(unknown.headers.get("access-control-allow-origin"), null);
+      const generate = async () => {
+        const response = await fetch(origin + "/api/pairings/code", {
+          method: "POST",
+          headers: localHeaders,
+          body: JSON.stringify({ origin: website }),
+        });
+        assert.equal(response.status, 200);
+        return response.json() as Promise<{ code: string }>;
+      };
+      const code = await generate();
+      const preflight = await fetch(origin + "/api/state", {
+        method: "OPTIONS",
+        headers: {
+          Origin: website,
+          "Access-Control-Request-Method": "GET",
+          "Access-Control-Request-Headers": "authorization",
+          "Access-Control-Request-Private-Network": "true",
+        },
+      });
+      assert.equal(preflight.status, 204);
+      assert.equal(
+        preflight.headers.get("access-control-allow-origin"),
+        website,
+      );
+      assert.equal(
+        preflight.headers.get("access-control-allow-private-network"),
+        "true",
+      );
+      assert.equal(
+        preflight.headers.get("access-control-allow-credentials"),
+        null,
+      );
+      assert.equal(
+        (await fetch(origin + "/api/session", { headers: { Origin: website } }))
+          .status,
+        403,
+      );
+      const redeem = async (value: string) =>
+        fetch(origin + "/api/pair", {
+          method: "POST",
+          headers: { Origin: website, "Content-Type": "application/json" },
+          body: JSON.stringify({ code: value }),
+        });
+      const redeemed = await redeem(code.code);
+      assert.equal(redeemed.status, 200);
+      assert.equal(redeemed.headers.get("set-cookie"), null);
+      const grant = (await redeemed.json()) as {
+        token: string;
+        id: string;
+        permission: string;
+      };
+      assert.equal(grant.permission, "read");
+      assert.equal((await redeem(code.code)).status, 403);
+      const remoteHeaders = {
+        Origin: website,
+        Authorization: "Bearer " + grant.token,
+      };
+      assert.equal(
+        (await fetch(origin + "/api/state", { headers: remoteHeaders })).status,
+        200,
+      );
+      assert.equal(
+        (
+          await fetch(origin + "/api/state", {
+            headers: { Authorization: "Bearer " + grant.token },
+          })
+        ).status,
+        401,
+      );
+      assert.equal(
+        (
+          await fetch(origin + "/api/state", {
+            headers: { ...remoteHeaders, Origin: "https://other.example" },
+          })
+        ).status,
+        403,
+      );
+      assert.equal(
+        (
+          await fetch(origin + "/api/state?token=" + grant.token, {
+            headers: { Origin: website },
+          })
+        ).status,
+        401,
+      );
+      assert.equal(
+        (await fetch(origin + "/api/pairings", { headers: remoteHeaders }))
+          .status,
+        403,
+      );
+      for (const path of [
+        "/api/tasks",
+        "/api/projects",
+        "/api/runtime/reconnect",
+        "/api/pairings/code",
+      ])
+        assert.equal(
+          (
+            await fetch(origin + path, {
+              method: "POST",
+              headers: { ...remoteHeaders, "Content-Type": "application/json" },
+              body: "{}",
+            })
+          ).status,
+          403,
+        );
+      const listed = await (
+        await fetch(origin + "/api/pairings", { headers: { Cookie: cookie } })
+      ).text();
+      assert.ok(!listed.includes(grant.token));
+      const events = await fetch(origin + "/api/events", {
+        headers: remoteHeaders,
+        signal: AbortSignal.timeout(5000),
+      });
+      assert.equal(events.status, 200);
+      const stream = events.body!.getReader();
+      assert.equal((await stream.read()).done, false);
+      const revoke = await fetch(
+        origin + "/api/pairings/" + grant.id + "/revoke",
+        { method: "POST", headers: localHeaders, body: "{}" },
+      );
+      assert.equal(revoke.status, 200);
+      assert.equal((await stream.read()).done, true);
+      stream.releaseLock();
+      const denied = await fetch(origin + "/api/state", {
+        headers: remoteHeaders,
+      });
+      assert.equal(denied.status, 401);
+      assert.equal(denied.headers.get("access-control-allow-origin"), website);
+      const next = await generate(),
+        newGrant = (await (await redeem(next.code)).json()) as {
+          token: string;
+        };
+      const headers = {
+        Origin: website,
+        Authorization: "Bearer " + newGrant.token,
+        "Content-Type": "application/json",
+      };
+      assert.equal(
+        (
+          await fetch(origin + "/api/pair/disconnect", {
+            method: "POST",
+            headers,
+            body: "{}",
+          })
+        ).status,
+        200,
+      );
+      assert.equal(
+        (await fetch(origin + "/api/state", { headers })).status,
+        401,
+      );
       assert.equal(
         remoteRequests,
         0,
