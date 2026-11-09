@@ -144,7 +144,7 @@ export function WatchedChat({
       )}
       {tab === "Checks" && (
         <p className="muted">
-          Recorded verification commands. These are not City’s required-check
+          Recorded verification commands. These are not Galaxi’s required-check
           gate; no success or upgrade is inferred here.
         </p>
       )}

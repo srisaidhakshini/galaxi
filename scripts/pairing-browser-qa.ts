@@ -152,6 +152,7 @@ try {
     fullPage: true,
   });
   await remotePage.goto(website);
+  await expect(remotePage).toHaveTitle("Galaxi — A place for your projects");
   await expect(
     remotePage.getByRole("heading", { name: "Connect your village." }),
   ).toBeVisible();
@@ -187,6 +188,9 @@ try {
     await expect(remotePage.locator(".app.paired-readonly")).toBeVisible({
       timeout: 15000,
     });
+    await expect(
+      remotePage.getByRole("link", { name: "Galaxi home" }),
+    ).toContainText("galaxi");
   };
   await pair(code);
   await expect(

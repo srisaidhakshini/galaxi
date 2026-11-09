@@ -453,12 +453,12 @@ function App() {
   return (
     <div className={"app " + (readOnly ? "paired-readonly" : "")}>
       <aside className="sidebar">
-        <a className="brand" href="/" aria-label="Codex City home">
+        <a className="brand" href="/" aria-label="Galaxi home">
           <span className="brand-icon">
             <Icon name="city" size={25} />
           </span>
           <span>
-            codex<span className="brand-light">city</span>
+            galaxi
             <small>YOUR DEVELOPMENT OUTPOST</small>
           </span>
         </a>
@@ -1025,7 +1025,7 @@ function App() {
                     disabled={readOnly}
                     onClick={() => setCityExecution(true)}
                   >
-                    Separate City task
+                    Separate Galaxi task
                   </button>
                 </div>
               )}

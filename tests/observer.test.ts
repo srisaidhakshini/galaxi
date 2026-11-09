@@ -132,7 +132,7 @@ test("duplicate snapshots do not restart animation and stale evidence becomes id
   assert.equal(c.worker.status, "idle");
   store.db.close();
 });
-test("recorded completion never awards progression or claims City verification", async () => {
+test("recorded completion never awards progression or claims Galaxi verification", async () => {
   const { store, runtime, observer } = fixture();
   await observer.watch("chat", "p");
   runtime.status = "completed";

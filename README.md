@@ -14,7 +14,7 @@ React · TypeScript · Three.js · Express · SQLite
 
 ![Galaxi desktop interface showing a circular village with three glass domes, a central fountain, paths, trees, and project navigation](docs/images/village-overview.png)
 
-_Actual application screenshot using sample project data. Galaxi is the project name; parts of the interface and code still use the original “Codex City” name._
+_Actual Galaxi application screenshot using sample project data._
 
 ## A habitat for every idea
 
@@ -52,9 +52,9 @@ The production controller serves the built browser bundle and API on the same lo
 
 ## Watch work from your existing Codex chat
 
-Select a project and choose **Watch Codex chat**, then pick a chat for that repository. Keep giving prompts in Codex: the city reads its latest recorded prompt, public messages, commands and file edits every two seconds. It does not submit another task, start extra agents, resume the chat, interrupt it, or control its approvals. Choose **Separate City task** only when you want the independent orchestration runner described above.
+Select a project and choose **Watch Codex chat**, then pick a chat for that repository. Keep giving prompts in Codex: the city reads its latest recorded prompt, public messages, commands and file edits every two seconds. It does not submit another task, start extra agents, resume the chat, interrupt it, or control its approvals. Choose **Separate Galaxi task** only when you want the independent orchestration runner described above.
 
-Watch connections persist. To attach a known chat when starting the controller, set `CITY_WATCH_THREAD` to its thread UUID. Its repository can be registered for observation without verification commands; such a project is watch-only until checks are configured. Observed work does not award upgrades or claim that City verification passed. Recorded activity can lag the desktop, and a separate App Server cannot reliably report another client's live turn status. The panel labels this limitation; no missing event is treated as success.
+Watch connections persist. To attach a known chat when starting the controller, set `CITY_WATCH_THREAD` to its thread UUID. Its repository can be registered for observation without verification commands; such a project is watch-only until checks are configured. Observed work does not award upgrades or claim that Galaxi verification passed. Recorded activity can lag the desktop, and a separate App Server cannot reliably report another client's live turn status. The panel labels this limitation; no missing event is treated as success.
 
 ## Run a separate coding task
 
@@ -84,7 +84,7 @@ Codes expire after **5 minutes** and can be used once. Connections last **8 hour
 
 See [pairing and troubleshooting](docs/PAIRING.md) for browser permissions and [deployment details](docs/DEPLOYMENT.md) for the static hosting boundary. Vercel hosts the frontend; it does not run the local companion.
 
-## City navigation
+## Village navigation
 
 Use **Move** to pan by dragging, or **Orbit** to rotate. **WASD** and the **arrow keys** pan while the scene has focus or the pointer is over it; typing in a field does not move the camera. The scene toolbar also offers rotate left/right, zoom, top-down view and reset buttons. Focus a selected project from its panel. Worker badges open the real session details; walking, material carrying and hammering illustrate observed execution states. Enable reduced motion to stop scene animation.
 
@@ -106,7 +106,7 @@ SQLite initializes automatically; no database service is needed. Schema v1 creat
 
 Browser refresh reconnects to authoritative snapshots and replays missing journal events by monotonically increasing ID. On controller restart, uncertain tasks become interrupted and pending runtime requests expire. Workspaces and completed history remain. Retry starts a new attempt from the original branch's current HEAD, rather than guessing whether old work finished. There is no automatic continuation of interrupted runtime threads.
 
-Results live under `.local/workspaces/<task-id>/integration`, with worker worktrees alongside it and branches named `codex/city-<task-id>…`. Retention is intentional. No automatic worktree deletion is implemented. Review/export results before using Git's own `worktree remove` and branch deletion commands; never delete a directory merely because the task failed.
+Results live under `.local/workspaces/<task-id>/integration`, with worker worktrees alongside it and branches named `codex/galaxi-<task-id>…`. Retention is intentional. No automatic worktree deletion is implemented. Review/export results before using Git's own `worktree remove` and branch deletion commands; never delete a directory merely because the task failed.
 
 ## Structure
 

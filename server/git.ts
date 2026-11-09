@@ -105,12 +105,12 @@ export async function commit(cwd: string) {
     await git(
       cwd,
       "-c",
-      "user.name=Codex City",
+      "user.name=Galaxi",
       "-c",
-      "user.email=city@localhost",
+      "user.email=galaxi@localhost",
       "commit",
       "-m",
-      "Codex City task result",
+      "Galaxi task result",
     );
   return git(cwd, "rev-parse", "HEAD");
 }

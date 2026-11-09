@@ -51,7 +51,7 @@ export class Codex extends EventEmitter {
       } else this.emit("message", m);
     });
     await this.call("initialize", {
-      clientInfo: { name: "codex_city", title: "Codex City", version: "0.1.0" },
+      clientInfo: { name: "galaxi", title: "Galaxi", version: "0.1.0" },
       capabilities: { experimentalApi: true },
     });
     this.send({ method: "initialized", params: {} });

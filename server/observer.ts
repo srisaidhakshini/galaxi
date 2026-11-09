@@ -123,7 +123,7 @@ export class ChatObserver {
         t.workers.some((w) => w.threadId === threadId),
       )
     )
-      throw Error("This chat is already managed as a City task");
+      throw Error("This chat is already managed as a Galaxi task");
     const { thread } = await this.reader.call("thread/read", { threadId });
     const path = await repository(thread.cwd);
     let project = this.store.state.projects.find((p) =>

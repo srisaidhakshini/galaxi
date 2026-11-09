@@ -121,7 +121,7 @@ try {
     "src/Dashboard.tsx",
   );
   await page
-    .getByRole("button", { name: "Separate City task", exact: true })
+    .getByRole("button", { name: "Separate Galaxi task", exact: true })
     .click();
   await expect(
     page.getByRole("textbox", { name: "Coding task" }),

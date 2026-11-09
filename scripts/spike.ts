@@ -14,9 +14,9 @@ execFileSync("git", [
   "-C",
   cwd,
   "-c",
-  "user.name=Codex City",
+  "user.name=Galaxi",
   "-c",
-  "user.email=city@localhost",
+  "user.email=galaxi@localhost",
   "commit",
   "--allow-empty",
   "-m",
@@ -64,7 +64,7 @@ try {
   await runtime.call("turn/start", {
     threadId: thread.id,
     input: textInput(
-      "Create hello.txt containing exactly Hello Codex City and run a shell command to read it back. This is a disposable integration smoke test. Do not spawn subagents.",
+      "Create hello.txt containing exactly Hello Galaxi and run a shell command to read it back. This is a disposable integration smoke test. Do not spawn subagents.",
     ),
   });
   await done;

@@ -8,7 +8,7 @@ import { terminal } from "../shared/domain.ts";
 const root = resolve(".local/e2e-" + randomUUID());
 await mkdir(root, { recursive: true });
 await git(root, "init");
-await writeFile(join(root, "README.md"), "Disposable Codex City E2E fixture\n");
+await writeFile(join(root, "README.md"), "Disposable Galaxi E2E fixture\n");
 await writeFile(
   join(root, "verify.cjs"),
   "const fs=require('node:fs');for(const f of ['alpha.txt','beta.txt'])if(!fs.readFileSync(f,'utf8').trim().endsWith('City'))process.exit(1);console.log('Both outputs verified');\n",
@@ -17,9 +17,9 @@ await git(root, "add", ".");
 await git(
   root,
   "-c",
-  "user.name=Codex City",
+  "user.name=Galaxi",
   "-c",
-  "user.email=city@localhost",
+  "user.email=galaxi@localhost",
   "commit",
   "-m",
   "fixture",

@@ -210,7 +210,7 @@ if (process.argv.includes("--production")) {
   app.use(vite.middlewares);
 }
 const server = app.listen(port, "127.0.0.1", () => {
-  console.log(`Codex City: ${origin}`);
+  console.log(`Galaxi: ${origin}`);
   void controller.connect().then(async () => {
     observer.start();
     if (process.env.CITY_WATCH_THREAD)

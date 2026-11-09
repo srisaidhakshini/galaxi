@@ -50,6 +50,8 @@ Start the updated companion with `npm run dev`. Open <http://127.0.0.1:4310>, ch
 
 ## Next releases
 
+Galaxi branding release (2026-11-09): production deployment `dpl_7L5DrvBYGisBVwnMVg7FhQmJoEhw`, <https://galaxi-blxfddirw-dhakshini.vercel.app>, promoted to <https://galaxi.dhakshini.studio>. The domain and Vercel project were already named Galaxi; this release unifies the application branding and browser title.
+
 Connection-page update (2026-11-09): staged and promoted production deployment `dpl_H8LmLCt1boaNnqmf1vt9LMWXngsZ`, <https://galaxi-3rnl7utli-dhakshini.vercel.app>. The public custom domain passed the full isolated pairing browser check after promotion. This release uses the current working tree based on `5ee0170`, including the pairing and UI changes.
 
 The CLI directory is linked to `Dhakshini/galaxi`. Recheck that identity before deploying. Use a preview or staged production deployment for future changes, verify it, and promote only when authorized. Git-based automatic deployment and CI have not been connected; pushing this repository alone does not currently update the website.

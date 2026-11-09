@@ -176,7 +176,7 @@ export function HabitatsPanel({
             return (
               <article className="habitat-member" key={`${m.kind}-${m.id}`}>
                 <small>
-                  {m.kind === "task" ? "City task" : "Codex chat turn"} ·{" "}
+                  {m.kind === "task" ? "Galaxi task" : "Codex chat turn"} ·{" "}
                   {task?.status || chat?.worker.status || "Recorded"}
                 </small>
                 <p>{m.prompt}</p>

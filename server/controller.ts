@@ -156,7 +156,7 @@ export class Controller {
     if (!p) throw new Error("Unknown project");
     if (!p.checks.length)
       throw new Error(
-        "This project is watch-only. Register required verification commands before starting City execution.",
+        "This project is watch-only. Register required verification commands before starting Galaxi execution.",
       );
     if (
       this.starting.has(p.id) ||
@@ -177,7 +177,7 @@ export class Controller {
         createdAt: new Date().toISOString(),
         workspace: join(git.workspaceRoot, id, "integration"),
         base: await git.git(p.path, "rev-parse", "HEAD"),
-        branch: `codex/city-${id}`,
+        branch: `codex/galaxi-${id}`,
         workers: [],
         checks: [],
         messages: [{ role: "user", text: prompt }],
@@ -277,7 +277,7 @@ export class Controller {
           await git.worktree(
             p.path,
             w.workspace,
-            `codex/city-${t.id}-${w.id}`,
+            `codex/galaxi-${t.id}-${w.id}`,
             await git.git(t.workspace, "rev-parse", "HEAD"),
           );
           this.ensure(t);
@@ -318,9 +318,9 @@ export class Controller {
             await git.git(
               t.workspace,
               "-c",
-              "user.name=Codex City",
+              "user.name=Galaxi",
               "-c",
-              "user.email=city@localhost",
+              "user.email=galaxi@localhost",
               "cherry-pick",
               w.commit!,
             );
@@ -521,7 +521,7 @@ export class Controller {
           id: m.id,
           error: {
             code: -32601,
-            message: "Unsupported server request in Codex City",
+            message: "Unsupported server request in Galaxi",
           },
         });
         this.event(

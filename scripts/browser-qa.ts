@@ -14,9 +14,9 @@ await git(repo, "add", ".");
 await git(
   repo,
   "-c",
-  "user.name=Codex City",
+  "user.name=Galaxi",
   "-c",
-  "user.email=city@localhost",
+  "user.email=galaxi@localhost",
   "commit",
   "--allow-empty",
   "-m",
