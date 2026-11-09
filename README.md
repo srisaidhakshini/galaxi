@@ -1,16 +1,37 @@
-# Codex City
+<div align="center">
 
-A local 3D workspace for real Codex coding agents. Connect a Git repository, submit a task, and watch a lead coordinate isolated implementation workers. Results stay in a separate task branch until you explicitly apply them.
+# Galaxi
 
-## Run
+### Your coding workspace, brought to life.
 
-The local companion can pair with a separately hosted website for read-only observation. Open **Browser connections** in the local window, approve the website's origin, and enter its one-time code on the website. Connections expire and can be revoked. See [pairing setup and deployment boundaries](docs/PAIRING.md).
+A local 3D village for your Codex projects. Watch your chats become growing habitats, with workers carrying materials, placing bricks, and building alongside your coding activity.
 
-The outpost gives each project a circular village on continuous terrain, with a central park, fountain and trees. Each Codex chat gets one persistent dome within its project. New prompts in that chat reuse the same building; different chats get separate domes. Earlier per-turn domes consolidate while preserving prompt history and construction progress. Separate City runner tasks retain their own work-site grouping. Related prompts share a habitat through lightweight keyword matching; use the **Habitats** tab to create, rename, or move assignments manually. The task composer can target a specific habitat. Click a dome to focus its crew, or focus the district to see its whole camp.
+**[Open Galaxi](https://galaxi.dhakshini.studio)** · **[Quick start](#quick-start)** · **[Pair your browser](#connect-the-hosted-website)** · **[Architecture](docs/ARCHITECTURE.md)**
 
-Workers appear at their assigned work site, collecting materials, carrying bricks, placing them and hammering during observed editing. New sites start as marked land, then gain a foundation, frame, glass, door and interior. Construction stages persist; previously built domes stay built. Stages illustrate recorded execution milestones rather than a measured percentage of code completion. Site grouping does not combine execution workspaces or change verification and success counts. Watching establishes the current turn as a baseline; subsequent prompts receive assignments without backfilling old chat history. Empty reserved sites do not render a dome until a prompt is assigned.
+React · TypeScript · Three.js · Express · SQLite
 
-Prerequisites: Node.js **24+**, npm, Git, and an authenticated Codex CLI on PATH. Windows also needs Windows PowerShell (used for configured verification commands). Tested with Node 24.21.0 and Codex 0.164.0-alpha.11.1.
+</div>
+
+![Galaxi desktop interface showing a circular village with three glass domes, a central fountain, paths, trees, and project navigation](docs/images/village-overview.png)
+
+_Actual application screenshot using sample project data. Galaxi is the project name; parts of the interface and code still use the original “Codex City” name._
+
+## A habitat for every idea
+
+| Feature                  | What it does                                                                                                                                                      |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **One chat, one dome**   | Each Codex chat gets a persistent home in its project's village. Later prompts continue the same building.                                                        |
+| **Build piece by piece** | Foundations, frames, glass panels, doors, windows, and furniture appear as prompt milestones and recorded construction stages advance. Growth has a cap.          |
+| **A working village**    | Workers walk, collect materials, carry, place, and hammer to illustrate observed activity. Trees, streetlights, paths, and a fountain bring the village together. |
+| **Watch existing chats** | Keep prompting in Codex. Galaxi reads recorded activity without submitting another task or taking over approvals.                                                 |
+| **Run separate tasks**   | An optional local runner coordinates a lead and isolated implementation workers, checks their results, and leaves application to you.                             |
+| **Connect a browser**    | Pair the hosted website with a local companion using an expiring code. Browser access is read-only and revocable.                                                 |
+
+> Construction is a visual interpretation of recorded activity, not a measured percentage of code completion. Watching a chat does not claim that Galaxi ran verification or award verified-task upgrades.
+
+## Quick start
+
+Prerequisites: Node.js **24.x**, npm, Git, and an authenticated Codex CLI on PATH. Windows also needs Windows PowerShell (used for configured verification commands). Tested with Node 24.21.0 and Codex 0.164.0-alpha.11.1.
 
 ```powershell
 npm ci
@@ -29,7 +50,13 @@ npm start
 
 The production controller serves the built browser bundle and API on the same loopback port. Keep development dependencies installed: `tsx` runs the TypeScript controller. Backend edits require restarting the controller; Vite updates frontend edits automatically.
 
-## First task
+## Watch work from your existing Codex chat
+
+Select a project and choose **Watch Codex chat**, then pick a chat for that repository. Keep giving prompts in Codex: the city reads its latest recorded prompt, public messages, commands and file edits every two seconds. It does not submit another task, start extra agents, resume the chat, interrupt it, or control its approvals. Choose **Separate City task** only when you want the independent orchestration runner described above.
+
+Watch connections persist. To attach a known chat when starting the controller, set `CITY_WATCH_THREAD` to its thread UUID. Its repository can be registered for observation without verification commands; such a project is watch-only until checks are configured. Observed work does not award upgrades or claim that City verification passed. Recorded activity can lag the desktop, and a separate App Server cannot reliably report another client's live turn status. The panel labels this limitation; no missing event is treated as success.
+
+## Run a separate coding task
 
 1. Select **Connect repository** and enter the absolute root of an existing Git repository with at least one commit.
 2. Accept detected npm test/lint/typecheck/build scripts or specify trusted verification commands, one per line. Commands must terminate; do not use watch mode. No detected checks means you must supply a meaningful check.
@@ -41,15 +68,25 @@ The production controller serves the built browser bundle and API on the same lo
 
 Repository scripts are executable local code. Register repositories and verification commands you trust. Controller verification commands run with your normal account permissions; agent commands use Codex's sandbox and approval policies. Task worktrees do not inherit ignored `node_modules`, virtual environments, or secrets. Give the agent appropriate setup instructions, or configure an explicit setup-and-verification command such as `npm ci; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; npm test` on Windows. Network requests from agent execution may require approval.
 
-## Watch work from your existing Codex chat
+## Connect the hosted website
 
-Select a project and choose **Watch Codex chat**, then pick a chat for that repository. Keep giving prompts in Codex: the city reads its latest recorded prompt, public messages, commands and file edits every two seconds. It does not submit another task, start extra agents, resume the chat, interrupt it, or control its approvals. Choose **Separate City task** only when you want the independent orchestration runner described above.
+The [hosted Galaxi website](https://galaxi.dhakshini.studio) is a viewer. Your local companion keeps repositories, execution, and Codex authentication on your computer. **Open the website on the same computer as the companion.**
 
-Watch connections persist. To attach a known chat when starting the controller, set `CITY_WATCH_THREAD` to its thread UUID. Its repository can be registered for observation without verification commands; such a project is watch-only until checks are configured. Observed work does not award upgrades or claim that City verification passed. Recorded activity can lag the desktop, and a separate App Server cannot reliably report another client's live turn status. The panel labels this limitation; no missing event is treated as success.
+1. Start the companion with `npm run dev`, then open [the local app](http://127.0.0.1:4310).
+2. In the local app, open **Browser connections**. Enter `https://galaxi.dhakshini.studio` in **Website origin** and select **Generate pairing code**.
+3. Paste the code into the hosted website and select **Pair this browser**. Allow local-network access if your browser asks.
+
+Codes expire after **5 minutes** and can be used once. Connections last **8 hours**; revoke them from the local app or disconnect from the paired browser. Start tasks and change projects in the local app.
+
+<p align="center">
+  <img src="docs/images/connection-setup.png" alt="Galaxi connection page with three numbered steps, a copy-address button, a pairing-code field, and collapsed advanced settings" width="620" />
+</p>
+
+See [pairing and troubleshooting](docs/PAIRING.md) for browser permissions and [deployment details](docs/DEPLOYMENT.md) for the static hosting boundary. Vercel hosts the frontend; it does not run the local companion.
 
 ## City navigation
 
-Use **Move** to pan by dragging, or **Orbit** to rotate. The scene toolbar also offers rotate left/right, zoom, top-down view and reset buttons. Focus a selected project from its panel. Worker badges open the real session details; walking, material carrying and hammering illustrate observed execution states. Enable reduced motion to stop scene animation.
+Use **Move** to pan by dragging, or **Orbit** to rotate. **WASD** and the **arrow keys** pan while the scene has focus or the pointer is over it; typing in a field does not move the camera. The scene toolbar also offers rotate left/right, zoom, top-down view and reset buttons. Focus a selected project from its panel. Worker badges open the real session details; walking, material carrying and hammering illustrate observed execution states. Enable reduced motion to stop scene animation.
 
 ## Configuration
 
@@ -80,7 +117,9 @@ Results live under `.local/workspaces/<task-id>/integration`, with worker worktr
 - `server/controller.ts`: planning, bounded scheduling, integration, checks and request routing.
 - `server/git.ts`: repository validation, worktrees, commits and command execution.
 - `server/store.ts`: SQLite snapshots, journal and transactional progression.
-- `server/index.ts`: loopback API, same-origin sessions, SSE invalidations and Vite/static hosting.
+- `server/index.ts`: loopback API, SSE invalidations and Vite/static hosting.
+- `server/pairing.ts`: local sessions, origin-bound pairing, read-only grants and revocation.
+- `src/CompanionPanel.tsx`, `src/companionClient.ts`: guided connection setup and authenticated companion transport.
 
 Details: [architecture and lifecycle](docs/ARCHITECTURE.md), [protocol compatibility](docs/CODEX-INTEGRATION.md), [verification and limitations](docs/VERIFICATION.md).
 
@@ -89,11 +128,22 @@ Details: [architecture and lifecycle](docs/ARCHITECTURE.md), [protocol compatibi
 ```powershell
 npm test
 npm run build
+```
+
+The isolated pairing browser check requires Microsoft Edge and uses sample data without starting real agents:
+
+```powershell
+npm run test:pairing
+```
+
+Optional checks against the real Codex runtime:
+
+```powershell
 npm run spike
 npm run test:e2e
 ```
 
-The first two are deterministic local checks. Spike and E2E use real Codex authentication, consume account usage, and modify only newly created disposable repositories under `.local`. Browser QA requires the app running and Microsoft Edge installed:
+`npm test` and `npm run build` are deterministic local checks. Spike and E2E use real Codex authentication, consume account usage, and modify only newly created disposable repositories under `.local`. Browser QA requires the app running and Microsoft Edge installed:
 
 ```powershell
 npm run test:browser
@@ -107,3 +157,13 @@ The browser scripts register a clearly named **QA Workshop** disposable reposito
 This is an exercised first implementation, not every acceptance scenario is verified against a live runtime. Authentication is handled through `codex login` in your terminal. Automatic resume after controller restart, MCP elicitation forms, attachment upload, automated dependency installation, manual check editing after project registration, conflict resolution, resource cleanup, and desktop packaging are not implemented. Conflicts preserve work and block the task; stop it before retrying. Checks are configured at registration; auto-detection currently covers npm scripts only. See the verification report for the precise boundary between real and deterministic tests.
 
 Registered project chats are discovered automatically every 30 seconds, within the eight-chat observation limit. Each chat gets its own dome; selecting it shows that chat's recorded activity. Stop watching is remembered so discovery does not reconnect a chat you stopped. Discovery only reads history and never starts or resumes agents.
+
+## Documentation
+
+| Guide                                          | Contents                                                            |
+| ---------------------------------------------- | ------------------------------------------------------------------- |
+| [Architecture](docs/ARCHITECTURE.md)           | Domain model, task lifecycle, persistence, and security boundaries. |
+| [Codex integration](docs/CODEX-INTEGRATION.md) | App Server protocol and compatibility notes.                        |
+| [Browser pairing](docs/PAIRING.md)             | Local approval, expiring codes, permissions, and troubleshooting.   |
+| [Deployment](docs/DEPLOYMENT.md)               | Vercel configuration, custom domain, and release process.           |
+| [Verification](docs/VERIFICATION.md)           | Tested flows, evidence, and known limitations.                      |
