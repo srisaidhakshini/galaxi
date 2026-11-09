@@ -1,0 +1,16 @@
+.git/
+.github/
+.local/
+.vercel/
+.vscode/
+node_modules/
+dist/
+.env
+.env.*
+*.sqlite
+*.sqlite-*
+server/
+tests/
+scripts/
+docs/
+README.md

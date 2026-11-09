@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "tsx --env-file-if-exists=.env server/index.ts",
     "build": "tsc --noEmit && vite build",
+    "build:web": "tsc --noEmit --project tsconfig.web.json && vite build",
     "start": "tsx --env-file-if-exists=.env server/index.ts --production",
     "test": "tsx --test tests/*.test.ts",
     "spike": "tsx scripts/spike.ts",
@@ -17,7 +18,8 @@
     "test:visual": "tsx scripts/city-visual-qa.ts",
     "test:watch": "tsx --env-file-if-exists=.env scripts/mirror-browser.ts",
     "test:ui": "tsx scripts/ui-qa.ts",
-    "test:outpost": "tsx scripts/outpost-qa.ts"
+    "test:outpost": "tsx scripts/outpost-qa.ts",
+    "test:pairing": "npm run build && tsx scripts/pairing-browser-qa.ts"
   },
   "dependencies": {
     "@react-three/drei": "^10.0.0",
@@ -41,6 +43,6 @@
     "typescript": "^5.9.0"
   },
   "engines": {
-    "node": ">=24"
+    "node": "24.x"
   }
 }
