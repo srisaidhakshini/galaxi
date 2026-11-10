@@ -1,14 +1,14 @@
 # Galaxi frontend deployment
 
-Current release: **2026-11-10**, the `galaxi` project in the `Dhakshini` Vercel workspace.
+Current release: **2026-11-11**, the `galaxi` project in the `Dhakshini` Vercel workspace.
 
 - Custom domain: <https://galaxi.dhakshini.studio>
 - Vercel production alias: <https://galaxi-orcin.vercel.app>
-- Deployment: `dpl_4R9qcGYaC4gezqrbwCpagAdfT84Z`
-- Deployment URL: <https://galaxi-expc2ketb-dhakshini.vercel.app>
+- Deployment: `dpl_4DqwEmTUksQMyKgDTg6xCtCCtgeT`
+- Deployment URL: <https://galaxi-mscsf9qnv-dhakshini.vercel.app>
 - Status: READY, production; staged, checked over HTTPS, then promoted without rebuilding.
 - Framework: Vite; build command `npm run build:web`.
-- Application source: committed and pushed at `e749d81`. Later release-verification documentation does not change the deployed application.
+- Application source: committed and pushed at `4d3b67e`. Later release-verification documentation does not change the deployed application.
 - Windows installer: <https://github.com/srisaidhakshini/galaxi-companion/releases/latest/download/Galaxi-Setup.exe>
 - Release notes and checksum: <https://github.com/srisaidhakshini/galaxi-companion/releases/tag/v0.2.0>
 
@@ -68,3 +68,9 @@ Connection-page update (2026-11-09): staged and promoted production deployment `
 The CLI directory is linked to `Dhakshini/galaxi`. Recheck that identity before deploying. Use a preview or staged production deployment for future changes, verify it, and promote only when authorized. Git-based automatic deployment and CI have not been connected; pushing this repository alone does not currently update the website.
 
 Remaining production work includes release checks, companion health/readiness endpoints, database backup/recovery, and frontend monitoring. The existing large frontend bundle warning remains.
+
+## Playful village website release (2026-11-11)
+
+The user selected a soft, playful village direction. Deployment `dpl_4DqwEmTUksQMyKgDTg6xCtCCtgeT` builds source `4d3b67e` with the sage/cream/peach palette, rounded workspace controls and inline village illustration. It returned authenticated HTTPS 200 while staged and was promoted to the existing custom domain without rebuilding. The complete pairing browser test then passed on the public HTTPS origin, including optional prompt permission, reload/recovery, revocation and native callback replay protection. No live agents or user data were used.
+
+README screenshots were refreshed with isolated sample projects. The published Windows installer remains version 0.2.0 with its existing appearance and verified checksum; no installer binary was replaced by this website-only release.
