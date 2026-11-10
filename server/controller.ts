@@ -490,6 +490,13 @@ export class Controller {
     });
   }
   onMessage(m: RpcMessage) {
+    if (
+      m.method === "account/updated" ||
+      m.method === "account/login/completed"
+    ) {
+      void this.connect();
+      return;
+    }
     const params = m.params ?? {};
     if (m.method === "serverRequest/resolved") {
       this.store.state.requests = this.store.state.requests.filter(

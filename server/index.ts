@@ -1,5 +1,6 @@
 import express from "express";
 import { resolve } from "node:path";
+import { createInterface } from "node:readline";
 import { z } from "zod";
 import { Store } from "./store.ts";
 import { Controller } from "./controller.ts";
@@ -16,7 +17,34 @@ const observer = new ChatObserver(store, controller.runtime, () =>
   controller.publish(),
 );
 const app = express();
+if (process.env.GALAXI_DESKTOP === "1")
+  app.use((_req, res, next) => {
+    res.setHeader(
+      "Content-Security-Policy",
+      "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+    );
+    next();
+  });
 const security = installPairing(app, origin);
+app.post("/api/runtime/login", async (_req, res) => {
+  try {
+    if (!controller.runtime.ready) await controller.connect();
+    const login = await controller.runtime.call("account/login/start", {
+      type: "chatgpt",
+    });
+    const url = new URL(login.authUrl);
+    if (
+      url.protocol !== "https:" ||
+      !["auth.openai.com", "auth0.openai.com", "chatgpt.com"].includes(
+        url.hostname,
+      )
+    )
+      throw Error("Codex returned an unexpected sign-in URL.");
+    res.json({ authUrl: url.href });
+  } catch (e) {
+    res.status(400).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
 app.get("/api/state", (req, res) =>
   res.json(store.snapshot(Number(req.query.after) || 0)),
 );
@@ -196,8 +224,11 @@ app.post(
   ),
 );
 if (process.argv.includes("--production")) {
-  app.use(express.static(resolve("dist")));
-  app.get("/{*path}", (req, res) => res.sendFile(resolve("dist/index.html")));
+  const staticDir = resolve(process.env.GALAXI_STATIC_DIR || "dist");
+  app.use(express.static(staticDir));
+  app.get("/{*path}", (req, res) =>
+    res.sendFile(resolve(staticDir, "index.html")),
+  );
 } else {
   const { createServer } = await import("vite");
   const vite = await createServer({
@@ -235,3 +266,8 @@ async function shutdown() {
 }
 process.once("SIGINT", shutdown);
 process.once("SIGTERM", shutdown);
+if (process.env.GALAXI_DESKTOP === "1") {
+  createInterface({ input: process.stdin }).on("line", (line) => {
+    if (line === "shutdown") void shutdown();
+  });
+}

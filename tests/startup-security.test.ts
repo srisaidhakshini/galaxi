@@ -123,11 +123,11 @@ test(
       });
       assert.equal(unknown.status, 403);
       assert.equal(unknown.headers.get("access-control-allow-origin"), null);
-      const generate = async () => {
+      const generate = async (permission = "read") => {
         const response = await fetch(origin + "/api/pairings/code", {
           method: "POST",
           headers: localHeaders,
-          body: JSON.stringify({ origin: website }),
+          body: JSON.stringify({ origin: website, permission }),
         });
         assert.equal(response.status, 200);
         return response.json() as Promise<{ code: string }>;
@@ -233,6 +233,71 @@ test(
         await fetch(origin + "/api/pairings", { headers: { Cookie: cookie } })
       ).text();
       assert.ok(!listed.includes(grant.token));
+      const promptCode = await generate("prompt");
+      const promptGrant = (await (await redeem(promptCode.code)).json()) as {
+        token: string;
+        id: string;
+        permission: string;
+      };
+      assert.equal(promptGrant.permission, "prompt");
+      const promptHeaders = {
+        Origin: website,
+        Authorization: "Bearer " + promptGrant.token,
+        "Content-Type": "application/json",
+      };
+      assert.equal(
+        (
+          await fetch(origin + "/api/tasks", {
+            method: "POST",
+            headers: promptHeaders,
+            body: "{}",
+          })
+        ).status,
+        400,
+      );
+      for (const path of [
+        "/api/projects",
+        "/api/runtime/login",
+        "/api/tasks/test/apply",
+        "/api/requests/test",
+        "/api/pairings/code",
+        "/api/habitats",
+        "/api/watch",
+      ]) {
+        assert.equal(
+          (
+            await fetch(origin + path, {
+              method: "POST",
+              headers: promptHeaders,
+              body: "{}",
+            })
+          ).status,
+          403,
+        );
+      }
+      assert.equal(
+        (
+          (await fetch(origin + "/api/connection", {
+            headers: promptHeaders,
+          }).then((r) => r.json())) as { permission: string }
+        ).permission,
+        "prompt",
+      );
+      await fetch(origin + "/api/pairings/" + promptGrant.id + "/revoke", {
+        method: "POST",
+        headers: localHeaders,
+        body: "{}",
+      });
+      assert.equal(
+        (
+          await fetch(origin + "/api/tasks", {
+            method: "POST",
+            headers: promptHeaders,
+            body: "{}",
+          })
+        ).status,
+        401,
+      );
       const events = await fetch(origin + "/api/events", {
         headers: remoteHeaders,
         signal: AbortSignal.timeout(5000),

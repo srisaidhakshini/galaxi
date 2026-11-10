@@ -6,6 +6,7 @@ import {
 } from "node:crypto";
 import { EventEmitter } from "node:events";
 import express from "express";
+import { pairedMutationAllowed } from "../shared/companionPermissions.ts";
 
 const hash = (value: string) =>
   createHash("sha256").update(value).digest("hex");
@@ -41,9 +42,13 @@ export type Connection = {
   origin: string;
   createdAt: number;
   expiresAt: number;
+  permission?: "read" | "prompt";
 };
 export class PairingAuthority {
-  codes = new Map<string, { origin: string; expiresAt: number }>();
+  codes = new Map<
+    string,
+    { origin: string; expiresAt: number; permission: "read" | "prompt" }
+  >();
   grants = new Map<string, Connection>();
   attempts = new Map<string, { count: number; reset: number }>();
   events = new EventEmitter();
@@ -65,7 +70,9 @@ export class PairingAuthority {
     for (const [key, a] of this.attempts)
       if (a.reset <= this.now()) this.attempts.delete(key);
   }
-  issue(origin: string) {
+  issue(origin: string, permission: "read" | "prompt" = "read") {
+    if (!["read", "prompt"].includes(permission))
+      throw Error("Invalid browser permission.");
     origin = websiteOrigin(origin);
     this.prune();
     for (const [key, c] of this.codes)
@@ -76,9 +83,14 @@ export class PairingAuthority {
       );
     const raw = randomBytes(12).toString("hex").toUpperCase();
     const expiresAt = this.now() + CODE_TTL;
-    this.codes.set(hash(raw), { origin, expiresAt });
+    this.codes.set(hash(raw), { origin, expiresAt, permission });
     this.approvedOrigins.add(origin);
-    return { code: raw.match(/.{4}/g)!.join("-"), origin, expiresAt };
+    return {
+      code: raw.match(/.{4}/g)!.join("-"),
+      origin,
+      expiresAt,
+      permission,
+    };
   }
   redeem(code: string, origin: string) {
     this.prune();
@@ -103,9 +115,10 @@ export class PairingAuthority {
       origin,
       createdAt: this.now(),
       expiresAt: this.now() + this.ttl,
+      permission: pending.permission,
     };
     this.grants.set(hash(token), connection);
-    return { token, ...connection, permission: "read" as const };
+    return { token, ...connection, permission: pending.permission };
   }
   authenticate(token: string, origin: string) {
     this.prune();
@@ -259,10 +272,14 @@ export function installPairing(app: express.Express, localOrigin: string) {
         !timingSafeEqual(Buffer.from(csrf), Buffer.from(cookie)))
     )
       return res.status(403).json({ error: "Invalid local session token" });
-    if (remote && req.method !== "GET" && req.path !== "/pair/disconnect")
+    if (
+      remote &&
+      req.method !== "GET" &&
+      !pairedMutationAllowed(connection.permission, req.path)
+    )
       return res.status(403).json({
         error:
-          "Paired browsers have read-only access. Use the local companion to make changes.",
+          "This browser cannot perform this action. Manage repositories, approvals and applying results in the local companion.",
       });
     res.locals.connection = connection;
     next();
@@ -277,7 +294,10 @@ export function installPairing(app: express.Express, localOrigin: string) {
   app.get("/api/connection", (_req, res) =>
     res.json({
       ...res.locals.connection,
-      permission: res.locals.connection.mode === "local" ? "local" : "read",
+      permission:
+        res.locals.connection.mode === "local"
+          ? "local"
+          : res.locals.connection.permission || "read",
     }),
   );
   app.get("/api/pairings", localOnly, (_req, res) =>
@@ -290,7 +310,7 @@ export function installPairing(app: express.Express, localOrigin: string) {
         throw Error(
           "This local window is already connected. Enter the separate website's origin.",
         );
-      res.json(authority.issue(website));
+      res.json(authority.issue(website, req.body?.permission || "read"));
     } catch (e) {
       res.status(400).json({ error: (e as Error).message });
     }

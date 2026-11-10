@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { pairedMutationAllowed } from "../shared/companionPermissions.ts";
 import {
   PairingAuthority,
   websiteOrigin,
@@ -59,4 +60,43 @@ test("code expiry, replacement, attempt throttling and grant expiry are enforced
   assert.throws(() => a.redeem(live.code, origin), /Too many/);
   now += 60001;
   assert.equal(a.redeem(live.code, origin).permission, "read");
+});
+
+test("prompt permission is granted locally, origin-bound, and never includes administration", () => {
+  const authority = new PairingAuthority();
+  const origin = "https://galaxi.example";
+  const issued = authority.issue(origin, "prompt");
+  const grant = authority.redeem(issued.code, origin);
+  assert.equal(grant.permission, "prompt");
+  assert.equal(
+    authority.authenticate(grant.token, origin)?.permission,
+    "prompt",
+  );
+  assert.equal(
+    authority.authenticate(grant.token, "https://other.example"),
+    undefined,
+  );
+  for (const path of [
+    "/tasks",
+    "/tasks/a/steer",
+    "/tasks/a/cancel",
+    "/pair/disconnect",
+  ])
+    assert.equal(pairedMutationAllowed("prompt", path), true);
+  for (const path of [
+    "/projects",
+    "/runtime/login",
+    "/runtime/reconnect",
+    "/tasks/a/apply",
+    "/requests/a",
+    "/pairings/code",
+    "/pairings/a/revoke",
+    "/watch",
+    "/habitats",
+    "/tasks/a/steer/extra",
+  ])
+    assert.equal(pairedMutationAllowed("prompt", path), false);
+  assert.equal(pairedMutationAllowed("read", "/tasks"), false);
+  assert.equal(pairedMutationAllowed(undefined, "/tasks"), false);
+  assert.throws(() => authority.issue(origin, "admin" as any));
 });
