@@ -18,18 +18,28 @@ _Actual Galaxi application screenshot using sample project data._
 
 ## A habitat for every idea
 
-| Feature                  | What it does                                                                                                                                                      |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **One chat, one dome**   | Each Codex chat gets a persistent home in its project's village. Later prompts continue the same building.                                                        |
-| **Build piece by piece** | Foundations, frames, glass panels, doors, windows, and furniture appear as prompt milestones and recorded construction stages advance. Growth has a cap.          |
-| **A working village**    | Workers walk, collect materials, carry, place, and hammer to illustrate observed activity. Trees, streetlights, paths, and a fountain bring the village together. |
-| **Watch existing chats** | Keep prompting in Codex. Galaxi reads recorded activity without submitting another task or taking over approvals.                                                 |
-| **Run separate tasks**   | An optional local runner coordinates a lead and isolated implementation workers, checks their results, and leaves application to you.                             |
-| **Connect a browser**    | Pair the hosted website with a local companion using an expiring code. Browser access is read-only and revocable.                                                 |
+| Feature                  | What it does                                                                                                                                                       |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **One chat, one dome**   | Each Codex chat gets a persistent home in its project's village. Later prompts continue the same building.                                                         |
+| **Build piece by piece** | Foundations, frames, glass panels, doors, windows, and furniture appear as prompt milestones and recorded construction stages advance. Growth has a cap.           |
+| **A working village**    | Workers walk, collect materials, carry, place, and hammer to illustrate observed activity. Trees, streetlights, paths, and a fountain bring the village together.  |
+| **Watch existing chats** | Keep prompting in Codex. Galaxi reads recorded activity without submitting another task or taking over approvals.                                                  |
+| **Run separate tasks**   | An optional local runner coordinates a lead and isolated implementation workers, checks their results, and leaves application to you.                              |
+| **Connect a browser**    | Approve the hosted website in the local companion. View-only is the default; optionally enable prompts that run on your computer. Access expires and is revocable. |
 
 > Construction is a visual interpretation of recorded activity, not a measured percentage of code completion. Watching a chat does not claim that Galaxi ran verification or award verified-task upgrades.
 
+## Windows companion
+
+The Windows x64 companion bundles Node.js, npm and Codex. It adds browser-based sign-in, a project-folder picker and a connection approval window, so end users do not need to clone Galaxi or run setup commands. Git and an eligible Codex account are still required; account usage limits apply.
+
+**[Download Galaxi for Windows](https://github.com/srisaidhakshini/galaxi/releases/latest/download/Galaxi-Setup.exe)** · [Release notes and checksum](https://github.com/srisaidhakshini/galaxi/releases/tag/v0.2.0)
+
+This initial Windows x64 installer is unsigned. See [companion setup and packaging](docs/COMPANION.md) for installation, requirements and verification instructions.
+
 ## Quick start
+
+For running from source:
 
 Prerequisites: Node.js **24.x**, npm, Git, and an authenticated Codex CLI on PATH. Windows also needs Windows PowerShell (used for configured verification commands). Tested with Node 24.21.0 and Codex 0.164.0-alpha.11.1.
 
@@ -70,16 +80,18 @@ Repository scripts are executable local code. Register repositories and verifica
 
 ## Connect the hosted website
 
-The [hosted Galaxi website](https://galaxi.dhakshini.studio) is a viewer. Your local companion keeps repositories, execution, and Codex authentication on your computer. **Open the website on the same computer as the companion.**
+The [hosted Galaxi website](https://galaxi.dhakshini.studio) connects to the local companion. The companion-enabled website supports no-code approval and optional prompt permission with Galaxi 0.2.0. Your local companion keeps repositories, execution, and Codex authentication on your computer. **Open the website on the same computer as the companion.**
 
-1. Start the companion with `npm run dev`, then open [the local app](http://127.0.0.1:4310).
-2. In the local app, open **Browser connections**. Enter `https://galaxi.dhakshini.studio` in **Website origin** and select **Generate pairing code**.
-3. Paste the code into the hosted website and select **Pair this browser**. Allow local-network access if your browser asks.
+1. Open the installed companion, or start the source version with `npm run dev`.
+2. On the website, choose **Connect installed companion** (or **Already running from source? Connect in browser**).
+3. Verify the requesting website address in the local approval window. Choose **View activity only** or **View activity and send prompts**, then select **Allow connection**. Allow local-network access if your browser asks.
 
-Codes expire after **5 minutes** and can be used once. Connections last **8 hours**; revoke them from the local app or disconnect from the paired browser. Start tasks and change projects in the local app.
+No manual code copying is needed for this flow. **Manual connection with a code** remains available as a fallback. Codes expire after **5 minutes**; approved browser connections last **8 hours** and can be revoked at any time.
+
+Prompt-enabled browsers can submit, steer and stop tasks in already-registered projects. Repository setup, runtime approvals and applying results stay in the local app. No developer-funded cloud AI service is used; work runs on the user's computer under their own Codex access and limits.
 
 <p align="center">
-  <img src="docs/images/connection-setup.png" alt="Galaxi connection page with three numbered steps, a copy-address button, a pairing-code field, and collapsed advanced settings" width="620" />
+  <img src="docs/images/connection-setup.png" alt="The manual code-pairing fallback with numbered instructions and advanced settings" width="620" />
 </p>
 
 See [pairing and troubleshooting](docs/PAIRING.md) for browser permissions and [deployment details](docs/DEPLOYMENT.md) for the static hosting boundary. Vercel hosts the frontend; it does not run the local companion.
@@ -164,6 +176,7 @@ Registered project chats are discovered automatically every 30 seconds, within t
 | ---------------------------------------------- | ------------------------------------------------------------------- |
 | [Architecture](docs/ARCHITECTURE.md)           | Domain model, task lifecycle, persistence, and security boundaries. |
 | [Codex integration](docs/CODEX-INTEGRATION.md) | App Server protocol and compatibility notes.                        |
+| [Windows companion](docs/COMPANION.md)         | Installation, packaging, local execution and release boundaries.    |
 | [Browser pairing](docs/PAIRING.md)             | Local approval, expiring codes, permissions, and troubleshooting.   |
 | [Deployment](docs/DEPLOYMENT.md)               | Vercel configuration, custom domain, and release process.           |
 | [Verification](docs/VERIFICATION.md)           | Tested flows, evidence, and known limitations.                      |

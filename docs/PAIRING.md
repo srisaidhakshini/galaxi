@@ -2,13 +2,24 @@
 
 The website can observe a local companion without starting another Codex session. The companion stays bound to `127.0.0.1`. The website and companion must run in the same computer's browser/network environment; this is not a relay for connecting a phone to another computer.
 
-## Pair a website
+## Connect without copying a code
+
+The Windows companion bundles Node.js, npm and Codex. Users still need Git for repository work and their own eligible Codex account. Galaxi does not pay for or provide unlimited AI usage. See [desktop setup and build instructions](COMPANION.md).
+
+1. Install and open the companion. Sign in with ChatGPT from its window, then use **Choose project folder…** to register a repository and its checks.
+2. In the website, select **Connect installed companion**. The browser may ask permission to open Galaxi.
+3. In the local approval window, verify the website address. Choose **View activity only** or **View activity and send prompts**, then select **Allow connection**.
+4. The website reconnects using a single-use handoff; no manual code copying is needed. Allow local-network access if the browser requests it.
+
+Source users can choose **Already running from source? Connect in browser**. This opens a local approval popup instead of the installed-app protocol. The callback requires a matching random request state, expires after five minutes and consumes a single-use code. The installer callback puts only that short-lived code in the fragment, clears it immediately, and exchanges it for a session-stored bearer credential. Bearer credentials never appear in a URL. Native callbacks return to the approved website root only.
+
+## Manual code fallback
 
 1. Start the companion with `npm run dev`, or build and run it with `npm run build` followed by `npm start`.
 2. Open its local window at `http://127.0.0.1:4310`. Select **Browser connections**. This control is available on narrow screens too.
-3. Enter the website's exact origin, such as `https://your-village.example`, and select **Generate pairing code**. The site will be able to read recorded activity for all projects registered with this companion. It cannot execute tasks or change repositories.
+3. Enter the website's exact origin, such as `https://your-village.example`, choose the browser permission and select **Generate pairing code**. View-only access is the default. Prompt permission also allows starting, steering and cancelling tasks in already-registered projects.
 4. Open the hosted website, enter the companion's loopback address and the generated code, then select **Pair this browser**. If the browser requests permission to contact the local computer, allow it for the website you approved.
-5. The website displays **Read-only paired browser**. Project/dome selection, recorded chat activity and camera controls remain available. Editing controls are disabled or omitted; the server independently rejects mutations.
+5. The website displays **Read-only paired browser** or **Prompts enabled**, matching the locally approved permission. Repository registration, watch settings, connection management, approval decisions and applying results remain local-only under both permissions. Task submission still requires a registered repository, configured checks and an authenticated local Codex runtime.
 
 Codes expire after five minutes, work once and are bound to the approved origin. Generating another code for an origin replaces its earlier unused code. Connections expire after eight hours. Browser refresh restores a live connection from that tab's session storage. Companion restart invalidates its connections; obtain a new code and use **Pair again** to reconnect. A temporary network interruption is retried automatically.
 
@@ -30,7 +41,7 @@ Local Network Access behavior varies between browsers. Production websites must 
 - Paired requests use an origin-bound bearer credential in the `Authorization` header with browser cookies omitted. Credentials never appear in URLs or event-stream query parameters.
 - Local administration retains HttpOnly, SameSite=Strict cookies and a matching CSRF header for mutations. Local sessions expire after eight hours; session bootstrap does not revoke unrelated sessions.
 - Event streams use authenticated fetch, end at expiry and close on revocation. Polling and reconnecting do not mint a replacement paired credential.
-- Paired access is read-only across the API. Browser connection management remains local-only. Permissions currently cover all registered projects; per-project sharing is not implemented.
+- Paired access defaults to read-only. A separately approved `prompt` grant allows only POST `/tasks`, `/tasks/:id/steer`, `/tasks/:id/cancel`, and self-disconnect. It never permits applying results or answering runtime approval requests. Browser connection management remains local-only. Permissions cover all registered projects; per-project sharing is not implemented.
 
 ## Verification
 
