@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { companionAddress } from "./companionClient";
 import { AutomaticConnect } from "./DesktopSetup";
+import { VillageWelcome } from "./VillageWelcome";
 
 export function ConnectCompanion({
   reason,
@@ -20,7 +21,8 @@ export function ConnectCompanion({
   } catch {}
   const validCode = /^[A-F0-9]{24}$/i.test(code.replace(/[-\s]/g, ""));
   return (
-    <main className="companion-gate">
+    <main className="companion-gate village-gate">
+      <VillageWelcome />
       <section className="companion-card" aria-labelledby="connect-title">
         <header className="connect-header">
           <span className="connect-brand">✦ GALAXI</span>

@@ -91,7 +91,7 @@ No manual code copying is needed for this flow. **Manual connection with a code*
 Prompt-enabled browsers can submit, steer and stop tasks in already-registered projects. Repository setup, runtime approvals and applying results stay in the local app. No developer-funded cloud AI service is used; work runs on the user's computer under their own Codex access and limits.
 
 <p align="center">
-  <img src="docs/images/connection-setup.png" alt="The manual code-pairing fallback with numbered instructions and advanced settings" width="620" />
+  <img src="docs/images/connection-setup.png" alt="Galaxi’s playful village welcome page with an illustrated garden and companion connection options" width="980" />
 </p>
 
 See [pairing and troubleshooting](docs/PAIRING.md) for browser permissions and [deployment details](docs/DEPLOYMENT.md) for the static hosting boundary. Vercel hosts the frontend; it does not run the local companion.

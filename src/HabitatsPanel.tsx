@@ -34,7 +34,7 @@ export function HabitatsPanel({
   return (
     <div className="habitats-panel">
       <div className="habitats-intro">
-        <div className="eyebrow">PROJECT RESEARCH DISTRICT</div>
+        <div className="eyebrow">YOUR PROJECT VILLAGE</div>
         <h3>
           {habitats.length} habitat{habitats.length === 1 ? "" : "s"} ·{" "}
           {habitats.reduce((n, h) => n + h.members.length, 0)} assignments

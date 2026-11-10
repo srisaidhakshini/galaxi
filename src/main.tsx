@@ -21,6 +21,7 @@ import {
 } from "./companionClient";
 import { ConnectCompanion, BrowserConnections } from "./CompanionPanel";
 import "./style.css";
+import "./village-theme.css";
 import { pairedMutationAllowed } from "../shared/companionPermissions";
 import { ApproveBrowser, DesktopSetup } from "./DesktopSetup";
 const companion = new CompanionClient();
@@ -475,18 +476,18 @@ function App() {
           </span>
           <span>
             galaxi
-            <small>YOUR DEVELOPMENT OUTPOST</small>
+            <small>YOUR LITTLE CODING VILLAGE</small>
           </span>
         </a>
         <div className="workspace-label">
           YOUR WORKSPACE <span>{readOnly ? "PAIRED" : "LOCAL"}</span>
         </div>
         <button className="nav-current" onClick={() => setSelected("")}>
-          <Icon name="map" /> Outpost overview{" "}
+          <Icon name="map" /> Your village{" "}
           <span className="count">{projects.length}</span>
         </button>
         <div className="project-heading">
-          <span>PROJECT DISTRICTS</span>
+          <span>YOUR PROJECTS</span>
           <button
             title="Add project"
             aria-label="Add project"
@@ -639,7 +640,7 @@ function App() {
             <span className="breadcrumb">
               Workspace <span>/</span>
             </span>{" "}
-            Research outpost
+            Your little workspace
           </div>
           <div className="top-status">
             <span
@@ -691,16 +692,13 @@ function App() {
           )}
         </div>
         <div className="page-heading">
-          <div className="eyebrow">MISSION CONTROL / LOCAL WORKSPACE</div>
+          <div className="eyebrow">A LITTLE SPACE TO MAKE SOMETHING GREAT</div>
           <div className="heading-row">
             <div>
               <h1>
-                A habitat for every idea<span>.</span>
+                Watch your ideas grow<span>.</span>
               </h1>
-              <p>
-                Big project districts. Small work sites. A crew that brings them
-                to life.
-              </p>
+              <p>Your projects, a few friendly builders, and room to grow.</p>
             </div>
             <button
               className="primary"
@@ -718,7 +716,7 @@ function App() {
             </span>
             <span>
               <strong>{projects.length.toString().padStart(2, "0")}</strong>
-              <small>Project districts</small>
+              <small>Projects</small>
             </span>
           </div>
           <div>
@@ -738,7 +736,7 @@ function App() {
               <strong>
                 {String(state?.habitats?.length || 0).padStart(2, "0")}
               </strong>
-              <small>Task habitats</small>
+              <small>Buildings</small>
             </span>
           </div>
           <div className="city-note">

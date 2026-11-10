@@ -1,0 +1,888 @@
+/* Galaxi's village palette. Shared by the website and local companion. */
+:root {
+  --ink: #344a40;
+  --muted: #748175;
+  --line: #e0e5d7;
+  --accent: #537861;
+  --accent-soft: #e6eedf;
+  --paper: #fffdf7;
+  --peach: #e9b99f;
+  --sky: #e5eef0;
+  color: var(--ink);
+  background: #f7f6ee;
+  font-family: "Segoe UI Variable", "Segoe UI", sans-serif;
+}
+body {
+  background: #f7f6ee;
+}
+button,
+input,
+textarea,
+select {
+  border-color: var(--line);
+  color: var(--ink);
+  border-radius: 12px;
+}
+button:hover {
+  background: #edf1e5;
+  border-color: #b8c6af;
+  color: #344f3e;
+}
+button:focus-visible,
+a:focus-visible,
+summary:focus-visible,
+[role="separator"]:focus-visible {
+  outline: 3px solid #b1c3a2;
+  outline-offset: 3px;
+}
+input,
+textarea,
+select {
+  background: var(--paper);
+}
+input:focus,
+textarea:focus,
+select:focus {
+  outline-color: #b5c9aa;
+  border-color: #8fa782;
+}
+input::placeholder,
+textarea::placeholder {
+  color: #85917e;
+}
+h1,
+h2,
+h3,
+.brand,
+.stats strong {
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+  color: var(--ink);
+}
+h1 {
+  font-weight: 700;
+  letter-spacing: -1px;
+}
+h1 > span {
+  color: #c78165;
+}
+pre {
+  background: #f2f3e9;
+  border-color: var(--line);
+  color: #566850;
+  border-radius: 12px;
+}
+summary,
+.muted,
+.form-note {
+  color: #71816d;
+}
+.primary,
+.companion-card .connect-submit,
+.connect-open {
+  background: #537861;
+  border-color: #537861;
+  color: #fffdf5;
+  border-radius: 13px;
+  box-shadow: 0 3px 0 #3e604a;
+  font-weight: 600;
+}
+.primary:hover,
+.companion-card .connect-submit:hover,
+.connect-open:hover {
+  background: #44674f;
+  border-color: #44674f;
+  color: #fffdf5;
+}
+.primary:disabled,
+.companion-card .connect-submit:disabled {
+  background: #dce4d3;
+  color: #68775f;
+  box-shadow: none;
+  border-color: #dce4d3;
+}
+.text-button,
+.text-button:hover {
+  color: #537861;
+}
+
+/* A soft garden sidebar replaces the separate dark dashboard theme. */
+.sidebar {
+  background: #eef1e6;
+  border-color: #dde3d3;
+  color: #52664f;
+  padding-top: 28px;
+}
+.brand {
+  color: #3d5b46;
+  font-size: 29px;
+  letter-spacing: -1.6px;
+}
+.brand-icon {
+  color: #fff7e3;
+  background: #c98c70;
+  border-radius: 14px 14px 14px 5px;
+  box-shadow: 0 3px 0 #b47b60;
+}
+.brand small {
+  color: #76866b;
+  font-size: 7px;
+  letter-spacing: 1.1px;
+}
+.workspace-label,
+.project-heading {
+  color: #75836c;
+  letter-spacing: 1.3px;
+}
+.workspace-label span {
+  color: #5d7757;
+  background: #e0e8d6;
+  border-color: #d1ddc6;
+  border-radius: 7px;
+}
+.nav-current,
+.nav-current:hover {
+  color: #3f6047;
+  background: #dce6d1;
+  border-color: #c8d8ba;
+  border-radius: 14px;
+}
+.count {
+  background: #f8faf1;
+  color: #5b7850;
+  border-radius: 7px;
+}
+.search-wrap {
+  background: #fafbf5;
+  border-color: #dbe2d1;
+  border-radius: 12px;
+  color: #829075;
+}
+.sidebar .search {
+  color: #425a40;
+}
+.search::placeholder {
+  color: #86927b;
+}
+.search-wrap:focus-within {
+  border-color: #8fa782;
+}
+.project-heading button,
+.sidebar .text-button {
+  color: #637a5d;
+}
+.project-heading button:hover {
+  background: #e0e8d6;
+  color: #3c603e;
+}
+.project-nav {
+  color: #587150;
+  border-radius: 13px;
+}
+.project-nav:hover {
+  color: #3f5d3d;
+  background: #e3eadb;
+}
+.project-nav.active {
+  color: #3e583a;
+  background: #fffdf5;
+  border-color: #d4dfc9;
+  box-shadow: 0 3px 8px #52664f08;
+}
+.project-glyph {
+  background: #f2dfcc;
+  border-radius: 11px;
+}
+.sidebar .project-nav small,
+.sidebar .nav-empty,
+.sidebar-bottom > p,
+.user small,
+.real-label {
+  color: #79876e;
+}
+.add-project,
+.add-project:hover {
+  color: #657c5b;
+  border-color: #becdb2;
+  background: #f5f7ed;
+  border-radius: 12px;
+}
+.runtime-state strong,
+.user {
+  color: #526c4d;
+}
+.user {
+  border-color: #d8e1ce;
+}
+.user > span {
+  color: #6d845f;
+  background: #e2e9d7;
+  border-color: #d3dec5;
+  border-radius: 10px;
+}
+
+/* The workspace uses the same warm paper, greenery and clay as the village. */
+.topbar {
+  color: #61765b;
+  border-color: var(--line);
+}
+.breadcrumb,
+.breadcrumb span,
+.top-status {
+  color: #7b8872;
+}
+.connection-permission {
+  color: #5d7852;
+  border-color: #d8e1ce;
+  background: #f0f4e8;
+  border-radius: 8px;
+}
+.top-separator {
+  background: #dae2d1;
+}
+.page-heading {
+  padding: 23px 0 19px;
+}
+.eyebrow {
+  color: #6c7b5d;
+  letter-spacing: 1.4px;
+}
+.heading-row h1 {
+  font-size: clamp(25px, 2.3vw, 34px);
+  margin-top: 8px;
+}
+.heading-row p {
+  color: #69795b;
+  font-size: 12px;
+}
+.stats {
+  border: 0;
+  background: transparent;
+  gap: 10px;
+  padding: 0;
+  box-shadow: none;
+  margin-bottom: 18px;
+}
+.stats > div {
+  background: #fffdf7;
+  border: 1px solid #e3e6d9;
+  border-radius: 16px;
+  padding: 14px 16px;
+  gap: 11px;
+}
+.stats > div:last-child {
+  border: 1px solid #e3e6d9;
+}
+.stats > div:nth-child(2) {
+  background: #fcf0e6;
+  border-color: #eddfd0;
+}
+.stats > div:nth-child(3) {
+  background: #edf2e6;
+  border-color: #dde5d3;
+}
+.stats > div:nth-child(4) {
+  background: #eaf1ef;
+  border-color: #dce5df;
+}
+.stats strong {
+  font-size: 23px;
+  font-weight: 700;
+}
+.stats small {
+  color: #667655;
+}
+.stat-icon {
+  color: #779060;
+  background: #e9efd9;
+  border-radius: 11px;
+}
+.stat-icon.amber {
+  color: #bd8367;
+  background: #f6dfc9;
+}
+.stat-icon.green {
+  color: #6a8c68;
+  background: #dce8cf;
+}
+.stat-icon.violet {
+  color: #6b9990;
+  background: #d9e9e2;
+}
+.city-shell {
+  border-color: #dfc8ae;
+  border-radius: 22px;
+  box-shadow: 0 5px 20px #6b72560b;
+}
+.world-top > span,
+.world-top button,
+.camera-tools > div,
+.world-bottom > span,
+.world-bottom > label {
+  border-radius: 12px;
+}
+.world-top button,
+.camera-tools button {
+  color: #7e735b;
+}
+.world-top button:hover,
+.camera-tools button:hover {
+  background: #f7e7d2;
+  color: #6e654d;
+}
+.world-top > span {
+  color: #8a795d;
+}
+.world-bottom > span,
+.world-bottom > label {
+  color: #827352;
+}
+.detail-panel {
+  background: var(--paper);
+  border-color: #e1ddcc;
+}
+.panel-header {
+  background: var(--paper);
+}
+.panel-header > p,
+.panel-header > .eyebrow,
+.panel-title button {
+  color: #7a896c;
+}
+.panel-title h2 {
+  color: #3d5945;
+}
+.button-row button {
+  color: #658057;
+  border-color: #dce4d1;
+  border-radius: 9px;
+}
+.button-row button:hover,
+.panel-title button:hover {
+  background: #edf2e3;
+  border-color: #becdac;
+  color: #46663e;
+}
+.tabs {
+  background: var(--paper);
+  border-color: #e3e7d7;
+  padding-block: 6px;
+  gap: 5px;
+}
+.tabs button {
+  color: #7b886f;
+  border-radius: 9px;
+  padding: 8px 10px;
+}
+.tabs button[aria-selected="true"] {
+  background: #e7eddb;
+  color: #4b6f46;
+}
+.tabs button[aria-selected="true"]::after {
+  display: none;
+}
+.watch-mode,
+.watch-footer,
+.habitats-overview {
+  background: #f0f3e8;
+  border-color: #e0e6d4;
+  color: #6d805e;
+}
+.watch-mode button {
+  color: #748868;
+}
+.watch-mode button[aria-pressed="true"] {
+  background: #e2eacb;
+  border-color: #cddbb6;
+  color: #4e6f42;
+}
+.watch-linkbar {
+  color: #5b7b52;
+  background: #eaf0df;
+  border-color: #d5e0c5;
+  border-radius: 12px;
+}
+.watch-linkbar:hover {
+  color: #466c3c;
+  background: #e2eccf;
+  border-color: #bfd0a9;
+}
+.watch-linkbar span,
+.watch-summary p,
+.watch-summary small,
+.watch-footer p,
+.habitats-overview > small {
+  color: #7b896e;
+}
+.watch-summary,
+.watched-prompt,
+.habitat-card,
+.assignment {
+  background: #fcfcf5;
+  border-color: #e3e7d8;
+  border-radius: 13px;
+}
+.watch-summary h3,
+.assignment > strong {
+  color: #58784d;
+}
+.watched-prompt .eyebrow,
+.observed-item > small,
+.message > strong,
+.watch-summary details summary {
+  color: #8b9b71;
+}
+.watched-prompt p,
+.observed-item p,
+.message p,
+.task-summary > p,
+.assignment > span {
+  color: #61755b;
+}
+.panel-empty p,
+.panel-empty h3,
+.muted,
+.form-note {
+  color: #7b8a70;
+}
+.agent-avatar {
+  background: #e9eedb;
+  color: #7c9566;
+  border-radius: 10px;
+}
+.observed-item.agentMessage:before,
+.event-dot {
+  background: #a4b68b;
+}
+.composer {
+  background: #f5f5e9;
+  border-color: #dfe5d2;
+}
+.composer textarea {
+  background: #fffef8;
+  border-color: #dce4cf;
+  color: #3e5a40;
+  border-radius: 13px;
+}
+.composer .form-note {
+  color: #7d8c6d;
+}
+.habitats-intro h3,
+.habitat-card strong,
+.watch-footer strong {
+  color: #56734a;
+}
+.habitats-intro p,
+.habitat-card small,
+.habitat-member > p,
+.habitat-member label,
+.habitat-target {
+  color: #718364;
+}
+.habitat-card-icon {
+  background: #f0dfc4;
+  color: #b99264;
+  border-radius: 12px;
+}
+.habitat-card:hover {
+  background: #f2f6e8;
+  border-color: #c8d8b7;
+}
+.habitat-card.selected {
+  background: #eaf1df;
+  border-color: #b9cfa4;
+}
+.habitat-card.selected .habitat-card-icon {
+  background: #d9e5c9;
+  color: #79985d;
+}
+.habitat-visit {
+  color: #829365;
+}
+.habitat-member {
+  background: #fcfcf4;
+  border-color: #e1e6d5;
+  border-radius: 12px;
+}
+.habitat-inspector {
+  border-color: #e1e6d5;
+}
+.habitat-member > small {
+  color: #899a6f;
+}
+.habitat-target select {
+  background: #fffef7;
+  color: #647e51;
+  border-color: #dce4cf;
+  border-radius: 10px;
+}
+.watch-choice[aria-pressed="true"] {
+  background: #eaf0df;
+  border-color: #bdcfa9;
+  color: #587746;
+}
+.watch-choice small,
+.assignment small,
+.activity-list p {
+  color: #718364;
+}
+.command-card > summary,
+.command-card > summary > code,
+.command-card pre {
+  color: #647a58;
+}
+.modal,
+.companion-manager {
+  background: #fffdf7;
+  border: 1px solid #dce3ce;
+  border-radius: 22px;
+  box-shadow: 0 22px 80px #3c533126;
+}
+.modal > p,
+.modal label {
+  color: #6f8161;
+}
+.modal input,
+.modal textarea,
+.companion-manager select {
+  color: #435c3e;
+  background: #fcfcf3;
+  border-color: #dce3ce;
+  border-radius: 11px;
+}
+.pairing-code-box {
+  background: #eaf0db;
+  color: #65804e;
+  border-radius: 14px;
+}
+.pairing-code-box output {
+  color: #4e713d;
+}
+.desktop-setup {
+  background: #edf2e2;
+  border-color: #d8e2c8;
+}
+
+/* The front door to the same village, rather than a separate setup form. */
+.companion-gate {
+  background: #f7f6ee;
+  color: var(--ink);
+  width: 100%;
+}
+.village-gate {
+  width: 100%;
+  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(390px, 510px);
+  gap: clamp(28px, 6vw, 100px);
+  align-items: center;
+  padding: 42px max(28px, calc((100vw - 1200px) / 2));
+  min-height: 100dvh;
+}
+.village-intro {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  max-width: 580px;
+}
+.village-wordmark {
+  color: #526e50;
+  text-decoration: none;
+  font-family: "Trebuchet MS", sans-serif;
+  font-weight: 700;
+  font-size: 32px;
+  letter-spacing: -1.5px;
+}
+.village-wordmark > span {
+  display: block;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.2px;
+  color: #6b7c5e;
+  font-weight: 400;
+  margin-top: 3px;
+  padding-left: 33px;
+}
+.village-intro-copy {
+  margin-top: 56px;
+}
+.village-kicker {
+  color: #70805e;
+  letter-spacing: 1.8px;
+  font-size: 9px;
+  font-weight: 600;
+}
+.village-intro h2 {
+  font-size: clamp(40px, 4.7vw, 64px);
+  letter-spacing: -2.9px;
+  line-height: 1.06;
+  margin: 16px 0;
+  color: #405f46;
+}
+.village-intro h2 span {
+  color: #cf9479;
+}
+.village-intro-copy p {
+  color: #69795b;
+  font-size: 15px;
+  max-width: 305px;
+  margin: 0;
+}
+.village-illustration {
+  width: 100%;
+  height: auto;
+  margin: -14px 0 -4px;
+  overflow: visible;
+}
+.village-intro-note {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: 28px;
+}
+.village-intro-note > span {
+  background: #e8edda;
+  color: #8a9e70;
+  width: 37px;
+  height: 37px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  font-size: 21px;
+}
+.village-intro-note strong,
+.village-intro-note div > span {
+  display: block;
+  font-size: 11px;
+  line-height: 1.7;
+  color: #738660;
+}
+.village-intro-note div > span {
+  color: #909a82;
+  font-size: 10px;
+}
+.companion-card {
+  background: #fffdf7;
+  color: var(--ink);
+  border-color: #e3e4d5;
+  border-radius: 26px;
+  box-shadow: 0 12px 50px #8f98721a;
+  padding: 32px;
+}
+.village-gate > .companion-card {
+  width: 100%;
+}
+.companion-card h1 {
+  color: #405d43;
+  font-size: 29px;
+  margin: 24px 0 10px;
+  letter-spacing: -1.1px;
+}
+.connect-brand {
+  color: #879d68;
+  font-size: 11px;
+  letter-spacing: 2px;
+}
+.connect-badge {
+  color: #8b976f;
+  background: #eef1e2;
+  border-radius: 20px;
+}
+.companion-card .connect-intro {
+  color: #657753;
+  margin-bottom: 24px;
+}
+.automatic-connect {
+  background: #f1f3e7;
+  border-color: #dfe5d0;
+  border-radius: 18px;
+  padding: 20px;
+  gap: 14px;
+}
+.automatic-connect h2 {
+  color: #526f48;
+  font-size: 17px;
+}
+.automatic-connect p {
+  color: #60734e;
+  font-size: 13px;
+}
+.automatic-connect small {
+  font-size: 11px;
+  line-height: 1.65;
+}
+.automatic-connect .connect-open {
+  padding: 13px 15px;
+  font-size: 13px;
+}
+.automatic-connect .connect-submit {
+  background: #fffbf1;
+  border: 1px solid #cddabf;
+  color: #5e7d4b;
+  box-shadow: 0 2px 0 #dce4cc;
+}
+.automatic-connect .connect-submit:hover {
+  background: #e5edd8;
+  color: #486c37;
+  border-color: #b3c69e;
+}
+.automatic-connect .text-button {
+  font-size: 11px;
+  color: #62764f;
+}
+.connect-help,
+.connect-help summary,
+.connect-help p,
+.connect-step p {
+  color: #657753;
+}
+.connect-step {
+  border-color: #e7eadb;
+}
+.connect-step h2 {
+  color: #536d48;
+}
+.connect-number {
+  background: #e6edd8;
+  color: #7b955d;
+}
+.connect-origin {
+  background: #f6f7ed;
+  border-color: #e0e6d2;
+  border-radius: 12px;
+}
+.connect-origin button {
+  border-color: #d6dfc8;
+  color: #74945a;
+  background: #fffdf6;
+  border-radius: 8px;
+}
+.companion-card .connect-code {
+  background: #fcfcf2;
+  border-color: #dde4cf;
+  border-radius: 12px;
+}
+.companion-card .connect-code-help,
+.companion-card .connect-permission {
+  color: #657753;
+}
+.connect-notice {
+  background: #fbefd9;
+  border-color: #eddfbf;
+  color: #8c7751;
+  border-radius: 13px;
+}
+.connect-footer {
+  background: #f3f4e9;
+  color: #657753;
+  border-radius: 14px;
+  padding: 14px;
+}
+.companion-card .connect-footer p {
+  color: #657753;
+  font-size: 11px;
+}
+.connection-options {
+  border-color: #dce5cf;
+  border-radius: 14px;
+}
+.companion-gate :is(button, a, input, summary):focus-visible {
+  outline-color: #a9bf91;
+}
+@media (min-width: 1500px) {
+  .village-gate {
+    padding-inline: calc((100vw - 1220px) / 2);
+  }
+}
+@media (max-width: 1000px) {
+  .village-gate {
+    gap: 28px;
+    padding: 28px;
+    grid-template-columns: minmax(0, 1fr) minmax(360px, 450px);
+  }
+  .village-intro h2 {
+    font-size: 44px;
+  }
+  .village-intro-copy {
+    margin-top: 40px;
+  }
+}
+@media (max-width: 760px) {
+  .village-gate {
+    grid-template-columns: minmax(0, 510px);
+    justify-content: center;
+    gap: 26px;
+    padding: 24px 16px;
+  }
+  .village-intro {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    position: relative;
+  }
+  .village-wordmark {
+    font-size: 27px;
+    grid-column: 1 / -1;
+  }
+  .village-wordmark > span {
+    display: none;
+  }
+  .village-intro-copy {
+    margin-top: 25px;
+  }
+  .village-intro h2 {
+    font-size: 34px;
+    letter-spacing: -1.5px;
+    margin: 9px 0;
+  }
+  .village-kicker {
+    font-size: 7px;
+    letter-spacing: 1px;
+  }
+  .village-intro-copy p {
+    font-size: 11px;
+  }
+  .village-illustration {
+    margin: 24px 0 0;
+    transform: scale(1.12);
+  }
+  .village-intro-note {
+    display: none;
+  }
+  .village-gate > .companion-card {
+    padding: 23px;
+    border-radius: 22px;
+  }
+  .stats {
+    gap: 7px;
+  }
+  .stats > div {
+    padding: 11px 10px;
+    border-radius: 13px;
+    gap: 7px;
+  }
+  .stats strong {
+    font-size: 19px;
+  }
+  .page-heading {
+    padding-block: 14px;
+  }
+  .heading-row h1 {
+    font-size: 25px;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .connect-open,
+  .primary {
+    transition:
+      background 0.15s,
+      box-shadow 0.15s,
+      transform 0.15s;
+  }
+  .connect-open:active,
+  .primary:active {
+    transform: translateY(2px);
+    box-shadow: none;
+  }
+}
