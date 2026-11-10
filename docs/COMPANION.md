@@ -4,7 +4,7 @@ The companion runs coding work on the user's computer with their own Codex accou
 
 ## First use
 
-1. Download `Galaxi-Setup.exe` from the [official Galaxi GitHub release](https://github.com/srisaidhakshini/galaxi/releases/tag/v0.2.0). Do not use binaries from an unrelated mirror.
+1. Download `Galaxi-Setup.exe` from the [official Galaxi GitHub release](https://github.com/srisaidhakshini/galaxi-companion/releases/tag/v0.2.0). Do not use binaries from an unrelated mirror.
 2. Run the per-user installer and open Galaxi. The current release is unsigned; Windows may display an unverified-publisher warning. No paid certificate is required to build it.
 3. Install Git if it is not already present. Node.js, npm and Codex are included in the companion.
 4. Select **Sign in with ChatGPT**. Authentication happens in your browser through Codex; no password or API key is entered into Galaxi.
@@ -38,4 +38,4 @@ The preparation step bundles the server, copies the production frontend, and inc
 
 Output: `.local/desktop-release/Galaxi-Setup.exe`. This is a build artifact, not a Git-tracked file. `desktop:prepare` prepares resources without packaging; `scripts/desktop-qa.ts` tests the packaged application using an isolated profile and Codex home, without signing in or running live tasks.
 
-Publish the tested installer and a SHA-256 checksum to a repository release using an explicitly authenticated GitHub session. The website's stable download URL is `https://github.com/srisaidhakshini/galaxi/releases/latest/download/Galaxi-Setup.exe`; do not advertise the first installer as available until that release exists. Public distribution and updating the hosted website are final release steps.
+Publish the tested installer and a SHA-256 checksum to a repository release using an explicitly authenticated GitHub session. The website's stable download URL is `https://github.com/srisaidhakshini/galaxi-companion/releases/latest/download/Galaxi-Setup.exe`; do not advertise the first installer as available until that release exists. Public distribution and updating the hosted website are final release steps.

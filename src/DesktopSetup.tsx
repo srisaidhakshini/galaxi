@@ -85,7 +85,7 @@ export function AutomaticConnect({
       </p>
       <a
         className="connect-open"
-        href="https://github.com/srisaidhakshini/galaxi/releases/latest/download/Galaxi-Setup.exe"
+        href="https://github.com/srisaidhakshini/galaxi-companion/releases/latest/download/Galaxi-Setup.exe"
       >
         Download for Windows
       </a>

@@ -33,7 +33,7 @@ _Actual Galaxi application screenshot using sample project data._
 
 The Windows x64 companion bundles Node.js, npm and Codex. It adds browser-based sign-in, a project-folder picker and a connection approval window, so end users do not need to clone Galaxi or run setup commands. Git and an eligible Codex account are still required; account usage limits apply.
 
-**[Download Galaxi for Windows](https://github.com/srisaidhakshini/galaxi/releases/latest/download/Galaxi-Setup.exe)** · [Release notes and checksum](https://github.com/srisaidhakshini/galaxi/releases/tag/v0.2.0)
+**[Download Galaxi for Windows](https://github.com/srisaidhakshini/galaxi-companion/releases/latest/download/Galaxi-Setup.exe)** · [Release notes and checksum](https://github.com/srisaidhakshini/galaxi-companion/releases/tag/v0.2.0)
 
 This initial Windows x64 installer is unsigned. See [companion setup and packaging](docs/COMPANION.md) for installation, requirements and verification instructions.
 
