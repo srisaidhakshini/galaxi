@@ -1,13 +1,18 @@
 # Galaxi frontend deployment
 
-Deployed on 2026-11-09 to the `galaxi` project in the `Dhakshini` Vercel workspace.
+Current release: **2026-11-10**, the `galaxi` project in the `Dhakshini` Vercel workspace.
 
 - Custom domain: <https://galaxi.dhakshini.studio>
 - Vercel production alias: <https://galaxi-orcin.vercel.app>
-- Deployment: `dpl_9Lr9Df8oNXiUd89UReYYYf7XfqYp`
-- Status: READY, production. Vercel automatically assigned the new project's first deployment to production.
-- Framework: Vite; cloud build approximately 22 seconds.
-- Source: the local working tree based on `5ee0170`, including the subsequent pairing and deployment changes. Those local changes were not committed or pushed as part of this deployment.
+- Deployment: `dpl_4R9qcGYaC4gezqrbwCpagAdfT84Z`
+- Deployment URL: <https://galaxi-expc2ketb-dhakshini.vercel.app>
+- Status: READY, production; staged, checked over HTTPS, then promoted without rebuilding.
+- Framework: Vite; build command `npm run build:web`.
+- Application source: committed and pushed at `e749d81`. Later release-verification documentation does not change the deployed application.
+- Windows installer: <https://github.com/srisaidhakshini/galaxi-companion/releases/latest/download/Galaxi-Setup.exe>
+- Release notes and checksum: <https://github.com/srisaidhakshini/galaxi-companion/releases/tag/v0.2.0>
+
+The application repository remains private. The public `galaxi-companion` repository distributes only binaries, checksums and installation instructions, so downloads do not require GitHub sign-in. The original private draft was removed before publication. No paid cloud coding resources or GitHub Actions jobs were created.
 
 ## Static frontend only
 
@@ -46,7 +51,13 @@ npx tsx scripts/pairing-browser-qa.ts
 
 ## Use your own village
 
-Start the updated companion with `npm run dev`. Open <http://127.0.0.1:4310>, choose **Browser connections**, and approve `https://galaxi.dhakshini.studio`. Enter the code on the hosted site and allow loopback/local-network access if asked. Both browser and companion must be on the same computer. See [pairing details](PAIRING.md).
+Install and open the Windows companion, sign in to your own eligible Codex account, and register a Git repository and its checks locally. Open <https://galaxi.dhakshini.studio> on this computer, select **Connect installed companion**, verify the requesting website locally, and choose view-only access or prompt permission. Allow local-network access if asked. Source users can still use `npm run dev` and the browser-popup connection option. See [companion setup](COMPANION.md) and [pairing details](PAIRING.md).
+
+## Companion release verification (2026-11-10)
+
+The public installer has size `276338593` bytes and SHA-256 `20691c20df016057c614109c63faf81dfc830ecd10169e1c828f9cc05711063b`. GitHub's server-reported digest matches the local build. An unauthenticated HTTPS request to the stable download returned 200, and the public Releases API returned the same digest. The installer is unsigned; see its release notes for tested limitations.
+
+The public site passed the complete isolated browser integration after promotion: read-only pairing, local approval of prompt permission, prompt UI, denied administration, reload/recovery, revocation, native callback fragment removal and replay rejection. No real agents or user data were used. A large installer upload initially timed out; HTTP/1.1 succeeded without bypassing TLS verification. Public release hosting required a separate download repository because the source repository is private.
 
 ## Next releases
 
