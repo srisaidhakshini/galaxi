@@ -139,12 +139,19 @@ try {
     .getByRole("textbox", { name: "Website origin", exact: true })
     .fill(website);
   const issue = async () => {
+    const response = localPage.waitForResponse(
+      (r) =>
+        r.url() === local + "/api/pairings/code" &&
+        r.request().method() === "POST",
+    );
     await localPage
       .getByRole("button", { name: "Generate pairing code", exact: true })
       .click();
-    const value = localPage.getByLabel("Generated pairing code");
-    await expect(value).toContainText(/^[A-F0-9]{4}(?:-[A-F0-9]{4}){5}$/);
-    return (await value.textContent())!;
+    const result = await (await response).json();
+    await expect(localPage.getByLabel("Generated pairing code")).toHaveText(
+      result.code,
+    );
+    return result.code as string;
   };
   const code = await issue();
   await localPage.screenshot({
@@ -175,6 +182,9 @@ try {
   });
   await remotePage.setViewportSize({ width: 1440, height: 1000 });
   const pair = async (code: string) => {
+    await remotePage
+      .getByText("Manual connection with a code", { exact: true })
+      .click();
     await remotePage.getByText("Advanced settings", { exact: true }).click();
     await remotePage
       .getByRole("textbox", { name: "Companion address", exact: true })
@@ -275,6 +285,120 @@ try {
   await expect(
     remotePage.getByRole("heading", { name: "Connect your village." }),
   ).toBeVisible();
+  // Approve prompt permission locally without copying a code. No model call is made.
+  await remotePage
+    .getByText("Manual connection with a code", { exact: true })
+    .click();
+  await remotePage.getByText("Advanced settings", { exact: true }).click();
+  await remotePage
+    .getByRole("textbox", { name: "Companion address", exact: true })
+    .fill(local);
+  const popupEvent = remotePage.waitForEvent("popup");
+  await remotePage
+    .getByRole("button", {
+      name: "Already running from source? Connect in browser",
+    })
+    .click();
+  const approval = await popupEvent;
+  await expect(
+    approval.getByRole("heading", { name: "Connect this browser?" }),
+  ).toBeVisible();
+  await expect(
+    approval.getByRole("radio", { name: "View activity only", exact: true }),
+  ).toBeChecked();
+  await approval
+    .getByRole("radio", { name: "View activity and send prompts", exact: true })
+    .check();
+  await approval
+    .getByRole("button", { name: "Allow connection", exact: true })
+    .click();
+  await expect(remotePage.locator(".top-status")).toContainText(
+    "Prompts enabled",
+  );
+  await remotePage
+    .locator(".project-nav")
+    .filter({ hasText: "Pairing QA project" })
+    .click();
+  await expect(remotePage.locator(".composer")).toBeVisible();
+  await expect(
+    remotePage.getByRole("button", {
+      name: "Connect repository",
+      exact: false,
+    }),
+  ).toBeDisabled();
+  const permissionChecks = await remotePage.evaluate(async (base) => {
+    const saved = JSON.parse(sessionStorage.getItem("city-companion-pairing")!);
+    const statuses = [];
+    for (const path of [
+      "/tasks",
+      "/projects",
+      "/tasks/test/apply",
+      "/requests/test",
+      "/runtime/login",
+    ]) {
+      statuses.push(
+        (
+          await fetch(base + "/api" + path, {
+            method: "POST",
+            headers: {
+              Authorization: "Bearer " + saved.token,
+              "Content-Type": "application/json",
+            },
+            body: "{}",
+          })
+        ).status,
+      );
+    }
+    return statuses;
+  }, local);
+  expect(permissionChecks).toEqual([400, 403, 403, 403, 403]);
+  await remotePage.reload();
+  await expect(remotePage.locator(".top-status")).toContainText(
+    "Prompts enabled",
+  );
+  await remotePage
+    .getByRole("button", { name: "Disconnect browser", exact: true })
+    .click();
+  // The native companion returns to a new browser tab using a short-lived fragment.
+  const nativeState = await remotePage.evaluate((base) => {
+    const state = crypto.randomUUID();
+    localStorage.setItem(
+      "galaxi-connect-request:" + state,
+      JSON.stringify({
+        state,
+        base,
+        origin: location.origin,
+        createdAt: Date.now(),
+      }),
+    );
+    return state;
+  }, local);
+  const nativeCode = await issue();
+  const callback =
+    website +
+    "/#galaxi-connect=" +
+    encodeURIComponent(
+      JSON.stringify({
+        type: "galaxi-connect",
+        state: nativeState,
+        code: nativeCode,
+      }),
+    );
+  const callbackPage = await remoteContext.newPage();
+  await callbackPage.goto(callback);
+  await expect(callbackPage.locator(".top-status")).toContainText(
+    "Read-only paired browser",
+  );
+  expect(new URL(callbackPage.url()).hash).toBe("");
+  const replay = await remoteContext.newPage();
+  await replay.goto(callback);
+  await expect(replay.getByRole("status")).toContainText(
+    "connection request expired",
+  );
+  await expect(replay.locator(".app")).toHaveCount(0);
+  expect(new URL(replay.url()).hash).toBe("");
+  await callbackPage.close();
+  await replay.close();
   expect(observedRequests.some((r) => r.authorization)).toBe(true);
   expect(
     observedRequests.every(

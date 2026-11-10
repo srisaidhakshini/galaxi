@@ -3119,6 +3119,58 @@ h1 > span {
   justify-content: space-between;
   gap: 12px;
 }
+.automatic-connect {
+  padding: 20px;
+  margin: 24px 0;
+  background: #f7f5fc;
+  border: 1px solid #e4ddf3;
+  border-radius: 12px;
+  display: grid;
+  gap: 12px;
+}
+.automatic-connect h2 {
+  font-size: 18px;
+  margin: 0;
+}
+.automatic-connect p {
+  margin: 0;
+}
+.automatic-connect .connect-open {
+  justify-content: center;
+}
+.manual-connection {
+  margin-bottom: 22px;
+}
+.connection-options {
+  border: 1px solid #e4ddf3;
+  border-radius: 10px;
+  margin: 20px 0;
+  padding: 16px;
+}
+.connection-options label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+}
+.connection-options input {
+  width: auto;
+}
+.desktop-setup {
+  padding: 18px 28px;
+  background: #f1edfa;
+  border-bottom: 1px solid #d9d0ec;
+}
+.desktop-setup p {
+  font-size: 13px;
+}
+.companion-manager select {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #d8ddef;
+  background: white;
+  color: #23364b;
+}
 .connect-brand {
   color: #6554a4;
   font-weight: 800;

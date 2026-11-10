@@ -1,7 +1,7 @@
 export type CompanionConnection = {
   id: string;
   mode: "local" | "paired";
-  permission: "local" | "read";
+  permission: "local" | "read" | "prompt";
   origin: string;
   expiresAt: number;
 };

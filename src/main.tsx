@@ -21,6 +21,8 @@ import {
 } from "./companionClient";
 import { ConnectCompanion, BrowserConnections } from "./CompanionPanel";
 import "./style.css";
+import { pairedMutationAllowed } from "../shared/companionPermissions";
+import { ApproveBrowser, DesktopSetup } from "./DesktopSetup";
 const companion = new CompanionClient();
 async function api(path: string, body?: unknown) {
   return companion.request(path, body);
@@ -142,11 +144,13 @@ function App() {
   const [error, setError] = useState("");
   const [connected, setConnected] = useState(false);
   const [connection, setConnection] = useState<CompanionConnection>();
+  const [bootstrapping, setBootstrapping] = useState(true);
   const [connectionEpoch, setConnectionEpoch] = useState(0);
   const [connectionReason, setConnectionReason] = useState("");
   const [connectionPhase, setConnectionPhase] = useState("Connecting");
   const [managingConnections, setManagingConnections] = useState(false);
-  const readOnly = connection?.permission === "read";
+  const readOnly = connection?.mode === "paired";
+  const canPrompt = connection?.permission !== "read";
   const [selected, setSelected] = useState(
     localStorage.getItem("city-project") || "",
   );
@@ -248,6 +252,7 @@ function App() {
   }
   useEffect(() => {
     const abort = new AbortController();
+    setBootstrapping(true);
     let timer: ReturnType<typeof setInterval> | undefined;
     const wait = () =>
       new Promise<void>((resolve) => {
@@ -263,6 +268,7 @@ function App() {
       try {
         const info = await companion.bootstrap(abort.signal);
         if (abort.signal.aborted) return;
+        setBootstrapping(false);
         setConnection(info);
         setConnectionReason("");
         setConnectionPhase("Connected");
@@ -288,6 +294,7 @@ function App() {
         }
       } catch (e) {
         if (!abort.signal.aborted) {
+          setBootstrapping(false);
           setConnection(undefined);
           setConnected(false);
           setConnectionPhase("Offline");
@@ -353,7 +360,7 @@ function App() {
   const events = (state?.events || []).filter((e) => e.taskId === task?.id);
   const requests = state?.requests.filter((r) => r.taskId === task?.id) || [];
   async function send(path: string, body: unknown) {
-    if (readOnly) {
+    if (readOnly && !pairedMutationAllowed(connection?.permission, path)) {
       setError(
         "This browser has read-only access. Make changes from the local companion.",
       );
@@ -438,6 +445,15 @@ function App() {
       setConnectionEpoch((n) => n + 1);
     }
   }
+  if (!connection && bootstrapping)
+    return (
+      <main className="companion-gate">
+        <section className="companion-card">
+          <span className="connect-brand">✦ GALAXI</span>
+          <p role="status">Checking your companion connection…</p>
+        </section>
+      </main>
+    );
   if (!connection)
     return (
       <ConnectCompanion
@@ -612,6 +628,12 @@ function App() {
         </div>
       </aside>
       <main>
+        {!readOnly && (
+          <DesktopSetup
+            api={api}
+            authenticated={!!state?.runtime.authenticated}
+          />
+        )}
         <header className="topbar">
           <div>
             <span className="breadcrumb">
@@ -625,10 +647,20 @@ function App() {
             />
             {connected ? "Companion connected" : connectionPhase}
             <span className="connection-permission">
-              {readOnly ? "Read-only paired browser" : "Local companion"}
+              {readOnly
+                ? canPrompt
+                  ? "Prompts enabled"
+                  : "Read-only paired browser"
+                : "Local companion"}
             </span>
             <span className="top-separator" />{" "}
-            <span>{readOnly ? "View only" : "Local execution"}</span>
+            <span>
+              {readOnly
+                ? canPrompt
+                  ? "Runs on your computer"
+                  : "View only"
+                : "Local execution"}
+            </span>
           </div>
         </header>
         <div className="mobile-connection-actions">
@@ -1022,7 +1054,7 @@ function App() {
                   </button>
                   <button
                     aria-pressed={!watching}
-                    disabled={readOnly}
+                    disabled={!canPrompt}
                     onClick={() => setCityExecution(true)}
                   >
                     Separate Galaxi task
@@ -1311,7 +1343,7 @@ function App() {
                   </>
                 )}
               </div>
-              {readOnly ? (
+              {!canPrompt ? (
                 <div className="watch-footer">
                   <strong>Read-only connection</strong>
                   <p>
@@ -1518,6 +1550,23 @@ function App() {
                 Project name <span>optional</span>
                 <input name="name" placeholder="My next great idea" autoFocus />
               </label>
+              {window.galaxiDesktop && (
+                <button
+                  type="button"
+                  onClick={async (e) => {
+                    const form = e.currentTarget.form;
+                    const path = await window.galaxiDesktop!.pickDirectory();
+                    if (path) {
+                      const input = form?.elements.namedItem(
+                        "path",
+                      ) as HTMLInputElement;
+                      if (input) input.value = path;
+                    }
+                  }}
+                >
+                  Choose project folder…
+                </button>
+              )}
               <label>
                 Absolute repository path
                 <input
@@ -1590,4 +1639,6 @@ function App() {
     </div>
   );
 }
-createRoot(document.getElementById("root")!).render(<App />);
+createRoot(document.getElementById("root")!).render(
+  window.location.pathname === "/connect" ? <ApproveBrowser /> : <App />,
+);
