@@ -2,11 +2,11 @@
 
 # Galaxi
 
-### Your coding workspace, brought to life.
+### A little world for your big ideas.
 
-A local 3D village for your Codex projects. Watch your chats become growing habitats, with workers carrying materials, placing bricks, and building alongside your coding activity.
+A playful 3D village for your Codex projects, with soft colours, glass domes, winding paths and a busy little crew. Watch recorded coding activity become construction, or send prompts from the website to your own local companion.
 
-**[Open Galaxi](https://galaxi.dhakshini.studio)** · **[Quick start](#quick-start)** · **[Pair your browser](#connect-the-hosted-website)** · **[Architecture](docs/ARCHITECTURE.md)**
+**[Open Galaxi](https://galaxi.dhakshini.studio)** · **[Download for Windows](https://github.com/srisaidhakshini/galaxi-companion/releases/latest/download/Galaxi-Setup.exe)** · **[Quick start](#quick-start)** · **[Run from source](#run-from-source)**
 
 React · TypeScript · Three.js · Express · SQLite
 
@@ -14,7 +14,7 @@ React · TypeScript · Three.js · Express · SQLite
 
 ![Galaxi desktop interface showing a circular village with three glass domes, a central fountain, paths, trees, and project navigation](docs/images/village-overview.png)
 
-_Actual Galaxi application screenshot using sample project data._
+_The current website theme, shown with sample project data._
 
 ## A habitat for every idea
 
@@ -37,9 +37,24 @@ The Windows x64 companion bundles Node.js, npm and Codex. It adds browser-based 
 
 This initial Windows x64 installer is unsigned. See [companion setup and packaging](docs/COMPANION.md) for installation, requirements and verification instructions.
 
+The website screenshots show the new village theme. The published **0.2.0 desktop installer** retains its earlier appearance; it works with the updated website and the same connection permissions.
+
 ## Quick start
 
-For running from source:
+1. **Install and open the companion.** Download the Windows installer above. Git and your own eligible Codex account are required; Node.js, npm and Codex are bundled.
+2. **Sign in and choose a project.** In the companion, select **Sign in with ChatGPT**, then **Connect repository** → **Choose project folder…**. Use an existing Git repository and configure its verification checks.
+3. **Connect the website.** Open [Galaxi](https://galaxi.dhakshini.studio) on this computer and select **Connect installed companion**. Verify the website address in the local approval window and choose your browser permission.
+
+Keep the companion running. Use your system's default browser for the installed-app callback; the browser-popup option also works if you prefer another browser. Allow local-network access when prompted.
+
+| Choose your mode                | What happens                                                                                                                                                                                 |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Watch Codex chat**            | Continue prompting in Codex. Galaxi displays recorded activity without starting another coding task.                                                                                         |
+| **Send prompts through Galaxi** | Approve **View activity and send prompts** locally, then submit a separate Galaxi task from the website. Work runs in local worktrees; approvals and applying results stay in the companion. |
+
+Galaxi does not run a developer-funded cloud AI service. Coding uses the user's computer and their own Codex account's eligibility and usage limits. The website alone cannot access a repository without the running, approved companion.
+
+## Run from source
 
 Prerequisites: Node.js **24.x**, npm, Git, and an authenticated Codex CLI on PATH. Windows also needs Windows PowerShell (used for configured verification commands). Tested with Node 24.21.0 and Codex 0.164.0-alpha.11.1.
 
@@ -124,14 +139,16 @@ Results live under `.local/workspaces/<task-id>/integration`, with worker worktr
 
 - `src/City.tsx`: procedural city, five building levels, scene workers, camera and rendering fallback.
 - `src/main.tsx`, `src/style.css`: project console, forms, approvals, replay and responsive layout.
+- `src/village-theme.css`, `src/VillageWelcome.tsx`: shared village palette, rounded interface and offline welcome illustration.
 - `shared/domain.ts`: renderer-independent entities, lifecycle, dependency validation and completion predicate.
 - `server/codex.ts`: stdio App Server JSON-RPC adapter.
 - `server/controller.ts`: planning, bounded scheduling, integration, checks and request routing.
 - `server/git.ts`: repository validation, worktrees, commits and command execution.
 - `server/store.ts`: SQLite snapshots, journal and transactional progression.
 - `server/index.ts`: loopback API, SSE invalidations and Vite/static hosting.
-- `server/pairing.ts`: local sessions, origin-bound pairing, read-only grants and revocation.
-- `src/CompanionPanel.tsx`, `src/companionClient.ts`: guided connection setup and authenticated companion transport.
+- `server/pairing.ts`, `shared/companionPermissions.ts`: local sessions, origin-bound grants, prompt permissions and revocation.
+- `src/CompanionPanel.tsx`, `src/companionClient.ts`, `src/connectionHandoff.ts`: connection setup, authenticated transport and one-time callback validation.
+- `src/DesktopSetup.tsx`, `desktop/`: desktop sign-in, local approval, folder selection and Windows packaging.
 
 Details: [architecture and lifecycle](docs/ARCHITECTURE.md), [protocol compatibility](docs/CODEX-INTEGRATION.md), [verification and limitations](docs/VERIFICATION.md).
 
@@ -166,7 +183,11 @@ The browser scripts register a clearly named **QA Workshop** disposable reposito
 
 ## Current limits
 
-This is an exercised first implementation, not every acceptance scenario is verified against a live runtime. Authentication is handled through `codex login` in your terminal. Automatic resume after controller restart, MCP elicitation forms, attachment upload, automated dependency installation, manual check editing after project registration, conflict resolution, resource cleanup, and desktop packaging are not implemented. Conflicts preserve work and block the task; stop it before retrying. Checks are configured at registration; auto-detection currently covers npm scripts only. See the verification report for the precise boundary between real and deterministic tests.
+The initial installer targets Windows x64, is unsigned, and does not include automatic updates. macOS, Linux and Windows ARM installers are not provided. Desktop sign-in opens the Codex browser authentication flow; source users can use `codex login`.
+
+Automatic resume after controller restart, MCP elicitation forms, attachment upload, automated dependency installation, manual check editing after project registration, conflict resolution and automatic resource cleanup are not implemented. Conflicts preserve work and block the task; stop it before retrying. Checks are configured at registration; auto-detection currently covers npm scripts only.
+
+The packaged-app and browser tests use isolated sample data. Real sign-in, live coding and clean-machine installer execution are not covered by those automated checks. See [verification and limitations](docs/VERIFICATION.md) for the evidence and scope.
 
 Registered project chats are discovered automatically every 30 seconds, within the eight-chat observation limit. Each chat gets its own dome; selecting it shows that chat's recorded activity. Stop watching is remembered so discovery does not reconnect a chat you stopped. Discovery only reads history and never starts or resumes agents.
 
