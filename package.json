@@ -1,6 +1,6 @@
 {
   "name": "galaxi",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -19,7 +19,9 @@
     "test:watch": "tsx --env-file-if-exists=.env scripts/mirror-browser.ts",
     "test:ui": "tsx scripts/ui-qa.ts",
     "test:outpost": "tsx scripts/outpost-qa.ts",
-    "test:pairing": "npm run build && tsx scripts/pairing-browser-qa.ts"
+    "test:pairing": "npm run build && tsx scripts/pairing-browser-qa.ts",
+    "desktop:prepare": "npm run build && node scripts/build-desktop.mjs",
+    "desktop:build": "npm run desktop:prepare && electron-builder --config desktop/builder.cjs --win nsis --x64 --publish never"
   },
   "dependencies": {
     "@react-three/drei": "^10.0.0",
@@ -32,17 +34,24 @@
     "zod": "^4.0.0"
   },
   "devDependencies": {
+    "@openai/codex": "0.167.0",
     "@playwright/test": "^1.56.0",
     "@types/express": "^5.0.0",
     "@types/node": "^24.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@types/three": "^0.180.0",
+    "electron": "45.2.3",
+    "electron-builder": "26.18.0",
+    "esbuild": "0.28.2",
     "prettier": "^3.9.10",
     "tsx": "^4.20.0",
     "typescript": "^5.9.0"
   },
   "engines": {
     "node": "24.x"
+  },
+  "overrides": {
+    "minimatch@>=7.0.0 <11.0.1": "11.0.5"
   }
 }
