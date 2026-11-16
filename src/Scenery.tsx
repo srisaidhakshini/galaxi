@@ -1,4 +1,5 @@
 import { useRef } from "react";
+import { RoundedBox } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 
@@ -20,10 +21,16 @@ function Block({
   colour: string;
 }) {
   return (
-    <mesh position={position} castShadow receiveShadow>
-      <boxGeometry args={scale} />
+    <RoundedBox
+      position={position}
+      args={scale}
+      radius={Math.min(...scale) * 0.15}
+      smoothness={3}
+      castShadow
+      receiveShadow
+    >
       <meshStandardMaterial color={colour} roughness={0.7} />
-    </mesh>
+    </RoundedBox>
   );
 }
 export function WindTree({
@@ -59,17 +66,21 @@ export function WindTree({
           <cylinderGeometry args={[0.065, 0.09, 0.9, 6]} />
           <meshStandardMaterial color="#856249" />
         </mesh>
-        {[
-          [0, 0.75, 0, 1],
-          [0.5, 0.5, 0.15, 0.72],
-          [-0.4, 0.45, -0.2, 0.75],
-          [0.15, 1.3, -0.1, 0.7],
-        ].map(([a, b, c, r], i) => (
+        {Array.from({ length: 15 }, (_, i) => {
+          const angle = i * 2.399;
+          const width = 0.25 + (i % 4) * 0.17;
+          return [
+            Math.sin(angle) * width,
+            0.45 + (i % 5) * 0.24,
+            Math.cos(angle) * width,
+            0.4 + (i % 3) * 0.12,
+          ];
+        }).map(([a, b, c, r], i) => (
           <mesh key={i} position={[a, b, c]} castShadow>
-            <icosahedronGeometry args={[r, 1]} />
+            <sphereGeometry args={[r, 28, 20]} />
             <meshStandardMaterial
               color={
-                ["#448c76", "#74a76e", "#a5bf72", "#68a68a"][(index + i) % 4]
+                ["#557c54", "#79965c", "#9aaa6a", "#6c905e"][(index + i) % 4]
               }
               roughness={0.95}
             />
@@ -159,6 +170,90 @@ function Fountain({ motion }: { motion: boolean }) {
     </group>
   );
 }
+function GardenBed({ x, z, colour }: { x: number; z: number; colour: string }) {
+  return (
+    <group position={[x, 0, z]}>
+      <Block position={[0, 0.16, 0]} scale={[1.8, 0.3, 0.7]} colour="#bfaa8f" />
+      <Block
+        position={[0, 0.32, 0]}
+        scale={[1.62, 0.05, 0.52]}
+        colour="#705e49"
+      />
+      {Array.from({ length: 9 }, (_, i) => (
+        <group
+          key={i}
+          position={[
+            -0.66 + i * 0.165,
+            0.43 + (i % 2) * 0.06,
+            Math.sin(i * 2) * 0.12,
+          ]}
+        >
+          <mesh scale={[1, 0.65, 1]}>
+            <sphereGeometry args={[0.16, 16, 12]} />
+            <meshStandardMaterial color="#597c59" />
+          </mesh>
+          {[0, 1, 2, 3, 4].map((p) => (
+            <mesh
+              key={p}
+              position={[
+                Math.sin(p * 1.256) * 0.06,
+                0.12,
+                Math.cos(p * 1.256) * 0.06,
+              ]}
+            >
+              <sphereGeometry args={[0.048, 10, 8]} />
+              <meshStandardMaterial color={colour} />
+            </mesh>
+          ))}
+          <mesh position={[0, 0.14, 0]}>
+            <sphereGeometry args={[0.035, 10, 8]} />
+            <meshStandardMaterial color="#f5d48b" />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+function ParkBench({ x, z, angle }: { x: number; z: number; angle: number }) {
+  return (
+    <group position={[x, 0, z]} rotation={[0, angle, 0]}>
+      {[-0.66, 0.66].map((x) => (
+        <Block
+          key={x}
+          position={[x, 0.28, 0]}
+          scale={[0.09, 0.52, 0.55]}
+          colour="#365c60"
+        />
+      ))}
+      {[0, 1, 2, 3].map((i) => (
+        <Block
+          key={i}
+          position={[0, 0.55, -0.23 + i * 0.15]}
+          scale={[1.85, 0.08, 0.12]}
+          colour={i % 2 ? "#bc8e63" : "#cb9b70"}
+        />
+      ))}
+      {[-0.76, 0.76].map((x) => (
+        <Block
+          key={x}
+          position={[x, 0.86, -0.3]}
+          scale={[0.06, 0.72, 0.06]}
+          colour="#365c60"
+        />
+      ))}
+      {[0, 1, 2].map((i) => (
+        <Block
+          key={i}
+          position={[0, 0.85 + i * 0.16, -0.32]}
+          scale={[1.85, 0.1, 0.07]}
+          colour="#bc8e63"
+        />
+      ))}
+    </group>
+  );
+}
+
 export function VillageLandscape({
   radius,
   motion,
@@ -170,214 +265,80 @@ export function VillageLandscape({
 }) {
   return (
     <group>
+      {/* A continuous pedestrian square; furnishings sit outside the walking routes. */}
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, 0.012, 0]}
+        position={[0, 0.016, 0]}
         receiveShadow
       >
-        <circleGeometry args={[4.65, 64]} />
-        <meshStandardMaterial color="#96b47a" />
+        <circleGeometry args={[5.1, 80]} />
+        <meshStandardMaterial color="#d8c7a8" roughness={0.95} />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-        <ringGeometry args={[4.55, 5.05, 64]} />
-        <meshStandardMaterial color="#ddd1b2" />
-      </mesh>
+      {[2.5, 4.85].map((r) => (
+        <mesh key={r} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.023, 0]}>
+          <ringGeometry args={[r, r + 0.1, 80]} />
+          <meshStandardMaterial color="#b7a385" roughness={1} />
+        </mesh>
+      ))}
+      {Array.from({ length: 48 }, (_, i) => (
+        <mesh
+          key={i}
+          rotation={[-Math.PI / 2, 0, (i * Math.PI) / 24]}
+          position={[0, 0.026, 0]}
+        >
+          <ringGeometry
+            args={[4.96, 5.11, 1, 1, (i * Math.PI) / 24, Math.PI / 24 - 0.012]}
+          />
+          <meshStandardMaterial color={i % 2 ? "#c2ae8e" : "#e9d9bc"} />
+        </mesh>
+      ))}
       <Fountain motion={motion} />
-      {Array.from({ length: 6 }, (_, i) => {
-        const a = [0.18, 1.1, 2.6, 3.4, 4.3, 5.7][i];
-        return (
-          <group
-            key={"street-" + i}
-            position={[Math.sin(a) * 5.4, 0, Math.cos(a) * 5.4]}
-            rotation={[0, a, 0]}
-          >
-            <Block
-              position={[0, 0.1, 0]}
-              scale={[0.3, 0.2, 0.3]}
-              colour="#667b7d"
-            />
-            <mesh position={[0, 1.16, 0]} castShadow>
-              <cylinderGeometry args={[0.045, 0.075, 2.2, 8]} />
-              <meshStandardMaterial
-                color="#425b64"
-                metalness={0.5}
-                roughness={0.5}
-              />
-            </mesh>
-            <Block
-              position={[0, 2.24, 0.22]}
-              scale={[0.07, 0.07, 0.5]}
-              colour="#425b64"
-            />
-            <mesh position={[0, 2.22, 0.47]}>
-              <coneGeometry args={[0.2, 0.14, 10]} />
-              <meshStandardMaterial color="#49616a" />
-            </mesh>
-            <mesh position={[0, 2.13, 0.47]} rotation={[Math.PI / 2, 0, 0]}>
-              <circleGeometry args={[0.16, 12]} />
-              <meshStandardMaterial
-                color="#ffedb5"
-                emissive="#ffd182"
-                emissiveIntensity={0.8}
-                side={THREE.DoubleSide}
-              />
-            </mesh>
-            {i % 2 === 0 && (
-              <group position={[0.5, 0, 0]}>
-                <mesh position={[0, 0.3, 0]} castShadow>
-                  <cylinderGeometry args={[0.21, 0.19, 0.6, 10]} />
-                  <meshStandardMaterial color="#43868b" />
-                </mesh>
-                <mesh position={[0, 0.62, 0]}>
-                  <cylinderGeometry args={[0.23, 0.23, 0.06, 10]} />
-                  <meshStandardMaterial color="#325359" />
-                </mesh>
-                <Block
-                  position={[0, 0.46, 0.2]}
-                  scale={[0.12, 0.09, 0.035]}
-                  colour="#d6e2c2"
-                />
-              </group>
-            )}
-          </group>
-        );
-      })}
-      <group position={[-3.3, 0, -4.6]} rotation={[0, 0.5, 0]}>
-        {[0, 0.4, 0.8].map((x) => (
-          <mesh key={x} position={[x, 0.32, 0]}>
-            <torusGeometry args={[0.3, 0.035, 6, 16, Math.PI]} />
+      <ParkBench x={-3.65} z={0} angle={Math.PI / 2} />
+      <ParkBench x={3.65} z={0} angle={-Math.PI / 2} />
+      <GardenBed x={0} z={-3.75} colour="#dc8e99" />
+      <GardenBed x={0} z={3.75} colour="#e9b45c" />
+      {[-1, 1].map((side) => (
+        <group key={side} position={[side * 4.4, 0, 1.65]}>
+          <Block
+            position={[0, 0.08, 0]}
+            scale={[0.28, 0.16, 0.28]}
+            colour="#a99e8a"
+          />
+          <mesh position={[0, 1.3, 0]} castShadow>
+            <cylinderGeometry args={[0.035, 0.065, 2.5, 12]} />
             <meshStandardMaterial
-              color="#788e95"
-              metalness={0.7}
-              roughness={0.35}
+              color="#31595c"
+              metalness={0.45}
+              roughness={0.45}
             />
           </mesh>
-        ))}
-        <Block
-          position={[0.4, 0.03, 0]}
-          scale={[1.25, 0.06, 0.2]}
-          colour="#889b9a"
-        />
-      </group>
-      <group position={[3.6, 0, -4.7]}>
-        <mesh position={[0, 0.27, 0]}>
-          <cylinderGeometry args={[0.1, 0.13, 0.5, 10]} />
-          <meshStandardMaterial color="#d77a5f" />
-        </mesh>
-        <mesh position={[0, 0.56, 0]}>
-          <sphereGeometry args={[0.13, 8, 6]} />
-          <meshStandardMaterial color="#d77a5f" />
-        </mesh>
-        <Block
-          position={[0, 0.35, 0]}
-          scale={[0.38, 0.1, 0.12]}
-          colour="#b85d4d"
-        />
-      </group>
-
-      {[0, 1, 2, 3].map((i) => (
-        <group key={i} rotation={[0, [0.2, 1.8, 3.6, 5.5][i], 0]}>
-          {[-0.55, 0.55].map((x) => (
-            <Block
-              key={x}
-              position={[x, 0.25, 3.45]}
-              scale={[0.09, 0.5, 0.45]}
-              colour="#596b70"
+          <mesh position={[0, 2.6, 0]}>
+            <sphereGeometry args={[0.18, 20, 16]} />
+            <meshStandardMaterial
+              color="#fff0cc"
+              emissive="#ffd690"
+              emissiveIntensity={0.6}
             />
-          ))}
-          {[0, 1, 2].map((j) => (
-            <Block
-              key={j}
-              position={[0, 0.5, 3.25 + j * 0.15]}
-              scale={[1.6, 0.07, 0.12]}
-              colour={j % 2 ? "#ae7650" : "#c18a5c"}
-            />
-          ))}
-          {[0, 1, 2].map((j) => (
-            <Block
-              key={j}
-              position={[0, 0.65 + j * 0.14, 3.65]}
-              scale={[1.6, 0.1, 0.07]}
-              colour="#b98258"
-            />
-          ))}
+          </mesh>
+          <mesh position={[0, 2.8, 0]}>
+            <coneGeometry args={[0.27, 0.18, 20]} />
+            <meshStandardMaterial color="#31595c" />
+          </mesh>
         </group>
       ))}
-      {[
-        [-0.72, -0.32],
-        [-0.53, -0.58],
-        [0.45, -0.65],
-        [0.62, -0.48],
-        [-0.24, 0.38],
-        [0.24, -0.32],
-        [0.12, 0.57],
-      ]
-        .map(([x, z]) => [x * radius, z * radius])
-        .filter(([x, z]) =>
-          sites.every(([a, , b]) => Math.hypot(x - a, z - b) > 4.5),
-        )
-        .slice(0, 5)
-        .map(([x, z], i) => (
-          <WindTree
-            key={"grove-" + i}
-            x={x}
-            z={z}
-            index={i + 10}
-            motion={motion}
-          />
-        ))}
-      {Array.from({ length: 8 }, (_, i) => {
-        const a = [0.2, 0.6, 1.8, 2.2, 3.5, 4.2, 5.3, 5.65][i];
-        return (
-          <group key={i} position={[Math.sin(a) * 4.15, 0, Math.cos(a) * 4.15]}>
-            <mesh position={[0, 0.12, 0]} castShadow>
-              <cylinderGeometry args={[0.35, 0.3, 0.24, 8]} />
-              <meshStandardMaterial color="#aa7055" />
-            </mesh>
-            {[0, 1, 2, 3, 4].map((j) => (
-              <group
-                key={j}
-                position={[
-                  Math.sin(j * 2.4) * 0.2,
-                  0.35 + (j % 2) * 0.12,
-                  Math.cos(j * 2.4) * 0.2,
-                ]}
-              >
-                <mesh>
-                  <sphereGeometry args={[0.12, 6, 5]} />
-                  <meshStandardMaterial
-                    color={["#ee9d71", "#e7c555", "#c58ac5", "#faf1cd"][i % 4]}
-                  />
-                </mesh>
-              </group>
-            ))}
-          </group>
-        );
-      })}
-      {Array.from({ length: 4 }, (_, i) => {
-        const a = [0.3, 1.7, 3.8, 5.1][i],
-          r = radius - 4;
-        return (
-          <group key={i} position={[Math.sin(a) * r, 0, Math.cos(a) * r]}>
-            <Block
-              position={[0, 0.55, 0]}
-              scale={[0.08, 1.1, 0.08]}
-              colour="#516f76"
-            />
-            <mesh position={[0, 1.15, 0]}>
-              <sphereGeometry args={[0.16, 8, 8]} />
-              <meshStandardMaterial
-                color="#ffe4a3"
-                emissive="#ffcd77"
-                emissiveIntensity={0.65}
-              />
-            </mesh>
-          </group>
-        );
+      {Array.from({ length: 9 }, (_, i) => {
+        const angle = i * 2.399;
+        const r = Math.min(radius - 2.5, 12 + (i % 3) * 2);
+        const x = Math.sin(angle) * r,
+          z = Math.cos(angle) * r;
+        if (sites.some(([a, , b]) => Math.hypot(x - a, z - b) < 4.5))
+          return null;
+        return <WindTree key={i} x={x} z={z} index={i} motion={motion} />;
       })}
     </group>
   );
 }
+
 export function HabitatDetails({
   stage,
   colour,

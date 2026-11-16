@@ -1,6 +1,5 @@
 import {
   habitatPromptCount,
-  habitatFeatures,
   domeScale,
   DOME_MAX_PROMPTS,
 } from "../shared/habitatGrowth";
@@ -36,11 +35,11 @@ export function HabitatsPanel({
       <div className="habitats-intro">
         <div className="eyebrow">YOUR PROJECT VILLAGE</div>
         <h3>
-          {habitats.length} habitat{habitats.length === 1 ? "" : "s"} ·{" "}
+          {habitats.length} house{habitats.length === 1 ? "" : "s"} ·{" "}
           {habitats.reduce((n, h) => n + h.members.length, 0)} assignments
         </h3>
         <p>
-          Each Codex chat has one dome. New prompts in that chat continue work
+          Each Codex chat has one house. New prompts in that chat continue work
           on the same building.
         </p>
       </div>
@@ -94,7 +93,7 @@ export function HabitatsPanel({
               key={h.id}
               onClick={() => onSelect(h.id)}
             >
-              <span className="habitat-card-icon">⌒</span>
+              <span className="habitat-card-icon">⌂</span>
               <span>
                 <strong>{h.name}</strong>
                 <small>
@@ -116,34 +115,15 @@ export function HabitatsPanel({
       )}
       {active && (
         <section className="habitat-inspector">
-          <div className="eyebrow">SELECTED HABITAT</div>
+          <div className="eyebrow">SELECTED HOUSE</div>
           <p className="muted">
             {habitatPromptCount(active)} recorded prompts ·{" "}
-            {Math.round(domeScale(habitatPromptCount(active)) * 100)}% dome size
-            · Growth caps at {DOME_MAX_PROMPTS} prompts.
+            {Math.round(domeScale(habitatPromptCount(active)) * 100)}% house
+            size · Growth caps at {DOME_MAX_PROMPTS} prompts.
           </p>
           <p className="muted">
-            Built features:{" "}
-            {Object.entries(
-              habitatFeatures(
-                habitatPromptCount(active),
-                active.constructionStage ?? 5,
-              ),
-            )
-              .filter(
-                ([key, value]) =>
-                  key !== "stage" && key !== "glassPanels" && value === true,
-              )
-              .map(([key]) => key)
-              .join(", ") || "marked land"}
-            . Glass panels:{" "}
-            {
-              habitatFeatures(
-                habitatPromptCount(active),
-                active.constructionStage ?? 5,
-              ).glassPanels
-            }
-            /8.
+            A tiled cottage with shutters, planted window boxes and stone steps.
+            Its size grows with this chat’s recorded prompts.
           </p>
           {!readOnly && (
             <form

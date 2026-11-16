@@ -167,7 +167,8 @@ function App() {
     localStorage.getItem("city-simple") === "true",
   );
   const [motion, setMotion] = useState(
-    localStorage.getItem("city-motion") !== "reduced",
+    localStorage.getItem("city-motion") !== "reduced" &&
+      !window.matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
   const [reset, setReset] = useState(0);
   const [pan, setPan] = useState(true);
@@ -1036,7 +1037,7 @@ function App() {
                 className="habitats-overview"
                 onClick={() => setTab("Habitats")}
               >
-                <span>⌒ {projectHabitats.length} habitats</span>
+                <span>⌂ {projectHabitats.length} houses</span>
                 <small>
                   {projectHabitats.reduce((n, h) => n + h.members.length, 0)}{" "}
                   assignments · Manage sites →
@@ -1425,7 +1426,7 @@ function App() {
                       onChange={(e) => setHabitatPreference(e.target.value)}
                     >
                       <option value="">
-                        Auto · match related work or create a dome
+                        Auto · match related work or create a house
                       </option>
                       {projectHabitats.map((h) => (
                         <option key={h.id} value={h.id}>
@@ -1640,3 +1641,4 @@ function App() {
 createRoot(document.getElementById("root")!).render(
   window.location.pathname === "/connect" ? <ApproveBrowser /> : <App />,
 );
+import "./food-weather.css";

@@ -1,0 +1,429 @@
+/* Galaxi: sea-glass, terracotta and warm sandstone. */
+:root {
+  --ink: #244c50;
+  --muted: #6c8383;
+  --line: #d6e4df;
+  --accent: #287772;
+  --accent-soft: #e3f1e9;
+  --paper: #fffcf5;
+  --sky: #d0e7e9;
+  background: #f2f5ef;
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+}
+body {
+  background: #f2f5ef;
+}
+h1,
+h2,
+h3,
+.brand,
+.stats strong {
+  color: #244c50;
+}
+h1 > span {
+  color: #d67f5b;
+}
+.sidebar {
+  background: linear-gradient(170deg, #e4efec, #eaf0e5 70%, #f6ebd9);
+  border-color: #d3e1da;
+}
+.brand,
+.village-wordmark {
+  color: #245c5c;
+}
+.brand-icon {
+  color: #fffcf1;
+  background: #36817a;
+  border-radius: 15px;
+  box-shadow: 0 3px 0 #24635f;
+}
+.brand small,
+.workspace-label,
+.project-heading {
+  color: #6d8782;
+}
+.nav-current,
+.nav-current:hover {
+  background: #d1e7df;
+  color: #225d58;
+  border-color: #b9d8cd;
+}
+.search-wrap,
+.sidebar .search {
+  background: #ffffffa6;
+  border-color: #d1dfd7;
+}
+.project-nav.active {
+  background: #fffdf5;
+  border-color: #b7d1c3;
+  box-shadow: 0 3px 10px #3d665b08;
+}
+.sidebar .project-nav {
+  background: #ffffff8c;
+  color: #36605a;
+}
+.sidebar .project-nav.active {
+  background: #fdfbf0;
+  color: #28574e;
+  border-color: #b8d1bf;
+}
+.primary,
+.companion-card .connect-submit,
+.connect-open {
+  background: #287772;
+  border-color: #287772;
+  color: white;
+  box-shadow: 0 3px 0 #195c58;
+  border-radius: 12px;
+}
+.primary:hover,
+.companion-card .connect-submit:hover,
+.connect-open:hover {
+  background: #1f6661;
+  border-color: #1f6661;
+  color: white;
+}
+button:hover {
+  color: #245d58;
+  background: #e7f1e9;
+  border-color: #afcec0;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+summary:focus-visible {
+  outline: 3px solid #438d84;
+  outline-offset: 3px;
+}
+.eyebrow {
+  color: #7d8766;
+}
+.heading-row h1 {
+  letter-spacing: -1.3px;
+}
+.heading-row p {
+  color: #72837c;
+}
+.stats > div {
+  background: #fff8e9;
+  border-color: #ecdfc1;
+  border-radius: 17px;
+  box-shadow: 0 3px 0 #d9cdb01f;
+}
+.stats > div:nth-child(2) {
+  background: #f9e9df;
+  border-color: #edd1bf;
+}
+.stats > div:nth-child(3) {
+  background: #e1f0e7;
+  border-color: #c8e0d1;
+}
+.stats > div:nth-child(4) {
+  background: #e5ecf5;
+  border-color: #d0dcea;
+}
+.stats small {
+  color: #6d817b;
+}
+.stat-icon {
+  background: #f1e5bd;
+  color: #9a7c3f;
+}
+.stat-icon.amber {
+  background: #f1cdb8;
+  color: #a46442;
+}
+.stat-icon.green {
+  background: #c5dfce;
+  color: #3f7a5c;
+}
+.stat-icon.violet {
+  background: #cfdaee;
+  color: #5d7a9c;
+}
+.watch-linkbar {
+  background: #e4eee0;
+  border-color: #d0ddc6;
+  color: #51715b;
+  border-radius: 12px;
+}
+.city-shell {
+  border: 2px solid #e7dfce;
+  border-radius: 23px;
+  box-shadow: 0 10px 32px #43694c10;
+  overflow: hidden;
+}
+.world-top > span,
+.world-top button,
+.camera-tools > div,
+.world-bottom > span,
+.world-bottom > label {
+  background: #fff9eced;
+  border-color: #e3d8c3;
+  color: #68735c;
+  box-shadow: 0 3px 14px #4767490a;
+  backdrop-filter: blur(8px);
+}
+.find-crew {
+  background: #2c6863;
+  border-color: #b7d4c6;
+  color: #fff9e9;
+}
+.detail-panel,
+.modal,
+.companion-card {
+  background: #fffdf7;
+  border-color: #dedfce;
+}
+.panel-header {
+  background: #fffdf7;
+}
+.panel-title h2 {
+  color: #285b57;
+}
+.panel-header > p {
+  color: #859082;
+}
+.panel-header .button-row button {
+  background: #f8f9ee;
+  border-color: #dfe5d4;
+  color: #60806a;
+}
+.tabs {
+  background: #f5f7ed;
+  border-color: #e0e5d7;
+}
+.tabs button {
+  color: #7b8974;
+}
+.tabs button[aria-selected="true"] {
+  color: #23665f;
+  background: #dfeee0;
+  border-color: #bed7c0;
+  border-radius: 10px;
+}
+.habitats-overview {
+  background: #edf3e6;
+  border-color: #dce6d2;
+}
+.watch-mode {
+  background: #f1f5e9;
+}
+.watch-mode button[aria-pressed="true"] {
+  color: #42714f;
+  background: #dbeacf;
+  border-color: #bfd5ac;
+}
+.habitat-card {
+  border-color: #dce6d7;
+  background: #fffef8;
+}
+.habitat-card.selected {
+  background: #e5f1df;
+  border-color: #b5d29f;
+}
+.habitat-card-icon {
+  background: #edf1d9;
+  color: #789957;
+}
+.habitat-label {
+  opacity: 1 !important;
+  pointer-events: auto;
+  max-width: 170px;
+  border: 1px solid #e4dcc6;
+  background: #fffcf2ed;
+  color: #53614b;
+  box-shadow: 0 3px 10px #51432918;
+}
+.habitat-label strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.habitat-label.selected {
+  background: #fff0c9;
+  border-color: #d6af60;
+}
+.watch-summary {
+  background: #f4f8ef;
+  border: 1px solid #e0e9d7;
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+.watch-summary h3 {
+  color: #315d53;
+  margin: 10px 0 6px;
+  font-size: 15px;
+}
+.watch-summary small {
+  color: #81917b;
+  font-size: 10px;
+}
+.watch-sync-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.watch-sync-row .text-button {
+  margin: 0;
+  padding: 3px;
+  font-size: 11px;
+  color: #42786d;
+}
+.turn-scope {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 0 0 14px;
+  border-bottom: 1px solid #e5e9dc;
+  margin-bottom: 15px;
+}
+.turn-scope label {
+  font-size: 10px;
+  color: #71856d;
+}
+.turn-scope select {
+  width: 100%;
+  min-width: 0;
+  padding: 9px 10px;
+  font-size: 11px;
+  background: #fffef9;
+}
+.turn-scope .text-button {
+  align-self: flex-start;
+  padding: 3px 0;
+  font-size: 11px;
+}
+.view-note {
+  color: #8b917f;
+  font-size: 10px;
+  line-height: 1.7;
+  padding: 10px 12px;
+  border-radius: 9px;
+  background: #f6f5eb;
+}
+.observed-item {
+  border-color: #e2e9dc;
+}
+.observed-item.userMessage {
+  background: #eef3e2;
+  border-color: #d8e5c7;
+  border-radius: 14px 14px 14px 3px;
+}
+.observed-item.agentMessage {
+  background: #fffdf5;
+  border: 1px solid #e9e5d5;
+  border-radius: 14px 14px 3px 14px;
+}
+.observed-item.fileChange {
+  background: #edf5ec;
+}
+.command-card {
+  border-color: #dee7d9;
+  border-radius: 12px;
+}
+.command-card > summary {
+  color: #4e7060;
+}
+.recorded-history .history-item {
+  width: 100%;
+  text-align: left;
+  border: 1px solid #dde5d7;
+  background: #fffdf5;
+  border-radius: 12px;
+  margin-top: 10px;
+  padding: 13px;
+}
+.recorded-history .history-item:hover {
+  background: #edf5e8;
+  border-color: #b8d0a9;
+}
+.recorded-history .history-item strong {
+  white-space: normal;
+  line-height: 1.6;
+  font-size: 12px;
+}
+.watch-footer {
+  background: #edf3e7;
+  border-color: #d9e3cf;
+}
+.village-gate {
+  background:
+    radial-gradient(ellipse at 12% 15%, #fff8db9c, transparent 45%),
+    linear-gradient(145deg, #d7ebe6, #edf1e3 65%, #f7e7ce);
+}
+.village-intro h2 {
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+  color: #315e54;
+  font-weight: 700;
+  letter-spacing: -2px;
+  line-height: 1.08;
+}
+.village-intro h2 > span {
+  color: #c78856;
+}
+.village-kicker {
+  color: #978154;
+  letter-spacing: 1.7px;
+}
+.village-intro-copy p,
+.village-wordmark > span {
+  color: #7a8d79;
+}
+.village-illustration {
+  filter: drop-shadow(0 18px 14px #3a745218);
+}
+.village-gate > .companion-card {
+  background: #fffdf5eb;
+  border: 1px solid #ffffffa6;
+  box-shadow: 0 20px 65px #617c5c15;
+}
+.companion-card h1 {
+  color: #315e54;
+}
+.connect-status,
+.connect-footer {
+  background: #edf3e6;
+  border-color: #d4e2cb;
+  color: #62825c;
+}
+.connect-number {
+  background: #efe3bf;
+  color: #9c8151;
+}
+.welcome-food {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .welcome-food {
+    animation: food-bob 7s ease-in-out infinite;
+  }
+  .welcome-burger {
+    animation-delay: -3s;
+  }
+  @keyframes food-bob {
+    0%,
+    100% {
+      translate: 0 -5px;
+      rotate: -3deg;
+    }
+    50% {
+      translate: 0 8px;
+      rotate: 4deg;
+    }
+  }
+}
+@media (max-width: 760px) {
+  .watch-summary {
+    padding: 11px;
+  }
+  .habitat-label {
+    max-width: 130px;
+  }
+}

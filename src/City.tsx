@@ -7,20 +7,18 @@ import React, {
   createContext,
   useContext,
 } from "react";
+import { MeadowMaterial, ChatHouse } from "./VillageCraft";
+
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { OrbitControls, Html } from "@react-three/drei";
+import { OrbitControls, Html, RoundedBox } from "@react-three/drei";
 import * as THREE from "three";
 import {
   districtPosition,
   habitatPosition,
   districtDepth,
+  villagePath,
 } from "./districtLayout";
-import {
-  HabitatDetails,
-  VillageLandscape,
-  siteColours,
-  DomeFurnishings,
-} from "./Scenery";
+import { VillageLandscape, siteColours } from "./Scenery";
 import {
   domeScale,
   habitatPromptCount,
@@ -65,10 +63,17 @@ function Box({
   [key: string]: any;
 }) {
   return (
-    <mesh position={at} castShadow receiveShadow {...props}>
-      <boxGeometry args={size} />
+    <RoundedBox
+      position={at}
+      args={size}
+      radius={Math.min(...size) * 0.14}
+      smoothness={3}
+      castShadow
+      receiveShadow
+      {...props}
+    >
       <meshStandardMaterial color={color} roughness={0.9} />
-    </mesh>
+    </RoundedBox>
   );
 }
 function Person({
@@ -471,7 +476,7 @@ function MarsTerrain({ projects }: { projects: Project[] }) {
         receiveShadow
       >
         <planeGeometry args={[4000, 4000]} />
-        <meshStandardMaterial color="#ba9479" roughness={1} />
+        <MeadowMaterial />
       </mesh>
       {Array.from({ length: Math.max(35, projects.length * 18) }, (_, i) => {
         const side = i % 2 ? -1 : 1,
@@ -497,9 +502,11 @@ function MarsTerrain({ projects }: { projects: Project[] }) {
   );
 }
 function hasVillageSite(h: Habitat) {
-  return h.members.length > 0 || (h.constructionStage ?? 5) > 0;
+  return (
+    !!h.chatThreadId || h.members.length > 0 || (h.constructionStage ?? 5) > 0
+  );
 }
-function HabitatDome({
+function HabitatHouse({
   current,
   habitat,
   workers,
@@ -549,42 +556,23 @@ function HabitatDome({
   }, [stage, targetStage]);
   const features = habitatFeatures(promptCount, stage);
   const siteColour = siteColours[habitat.plot % siteColours.length];
-  const editing = workers.some((w) => w.status === "editing"),
-    busy =
-      workers.some((w) =>
-        [
-          "editing",
-          "checking",
-          "running commands",
-          "inspecting",
-          "planning",
-        ].includes(w.status),
-      ) || ownedTasks.some((t) => !terminal(t.status));
-  const waiting = workers.some(
-    (w) => w.status.includes("waiting") || w.status === "blocked",
-  );
-  const failed = ownedTasks.at(-1)?.status === "failed";
-  const accent = failed
-    ? "#d78572"
-    : waiting
-      ? "#e9bd77"
-      : busy
-        ? "#9ecdc6"
-        : "#b4c6c8";
+  const busy =
+    workers.some((w) =>
+      [
+        "editing",
+        "checking",
+        "running commands",
+        "inspecting",
+        "planning",
+      ].includes(w.status),
+    ) || ownedTasks.some((t) => !terminal(t.status));
+  const sitePosition = habitatPosition(habitat.plot);
   return (
-    <group position={habitatPosition(habitat.plot)}>
+    <group
+      position={sitePosition}
+      rotation={[0, Math.atan2(-sitePosition[0], -sitePosition[2]), 0]}
+    >
       <group ref={structure} scale={initialSize.current}>
-        {current && (
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}>
-            <ringGeometry args={[2.58, 2.72, 48]} />
-            <meshBasicMaterial color="#f3c761" transparent opacity={0.8} />
-          </mesh>
-        )}
-        <HabitatDetails
-          stage={features.stage}
-          colour={siteColour}
-          busy={busy}
-        />
         <group
           onClick={(e) => {
             e.stopPropagation();
@@ -600,80 +588,33 @@ function HabitatDome({
             document.body.style.cursor = "auto";
           }}
         >
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.025, 0]}>
-            <circleGeometry args={[2.65, 32]} />
-            <meshStandardMaterial color="#ba9779" />
-          </mesh>
-          {features.foundation && (
-            <mesh position={[0, 0.09, 0]} castShadow receiveShadow>
-              <cylinderGeometry args={[2.35, 2.45, 0.18, 16]} />
-              <meshStandardMaterial color="#b9b9ad" />
-            </mesh>
+          <ChatHouse
+            position={[0, 0, 0]}
+            color={
+              ["#e4ceb0", "#ddd7bb", "#e3c5ae", "#c9d4c1"][habitat.plot % 4]
+            }
+            accent={siteColour}
+          />
+          {(selected || current || hovered) && (
+            <group>
+              {[-1.94, 1.94].map((x) => (
+                <Box
+                  key={`side-${x}`}
+                  at={[x, 0.055, 0.4]}
+                  size={[0.055, 0.055, 4.3]}
+                  color={selected || current ? "#e9bf68" : siteColour}
+                />
+              ))}
+              {[-1.75, 2.55].map((z) => (
+                <Box
+                  key={`end-${z}`}
+                  at={[0, 0.055, z]}
+                  size={[3.93, 0.055, 0.055]}
+                  color={selected || current ? "#e9bf68" : siteColour}
+                />
+              ))}
+            </group>
           )}
-          {Array.from({ length: features.glassPanels }, (_, i) => (
-            <mesh key={"glass-" + i} position={[0, 0.21, 0]}>
-              <sphereGeometry
-                args={[
-                  2.08,
-                  4,
-                  8,
-                  (i * Math.PI) / 4,
-                  Math.PI / 4 - 0.025,
-                  0,
-                  Math.PI / 2,
-                ]}
-              />
-              <meshStandardMaterial
-                color={siteColour}
-                transparent
-                opacity={selected || editing ? 0.1 : 0.2}
-                roughness={0.15}
-                metalness={0.15}
-                side={THREE.DoubleSide}
-                depthWrite={false}
-              />
-            </mesh>
-          ))}
-          {features.frame && (
-            <mesh position={[0, 0.22, 0]}>
-              <sphereGeometry
-                args={[2.1, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2]}
-              />
-              <meshStandardMaterial
-                color="#e8e6db"
-                wireframe
-                roughness={0.65}
-              />
-            </mesh>
-          )}
-          <mesh position={[0, 0.25, 0]} rotation={[Math.PI / 2, 0, 0]}>
-            <torusGeometry args={[2.12, 0.055, 6, 36]} />
-            <meshStandardMaterial
-              color={current ? "#f2c65e" : siteColour}
-              emissive={current ? "#efb935" : "#000000"}
-              emissiveIntensity={current ? 0.7 : 0}
-            />
-          </mesh>
-          {features.door && (
-            <>
-              <Box
-                at={[0, 0.62, 1.98]}
-                size={[0.86, 1.1, 0.38]}
-                color="#e6e1ca"
-              />
-              <Box
-                at={[0, 0.58, 2.19]}
-                size={[0.62, 0.88, 0.06]}
-                color="#7d8d91"
-              />
-              <Box
-                at={[0, 1.04, 2.23]}
-                size={[0.4, 0.055, 0.03]}
-                color={accent}
-              />
-            </>
-          )}
-          <DomeFurnishings features={features} colour={siteColour} />
           {busy && stage >= 1 && stage < 5 && (
             <>
               <Box
@@ -696,7 +637,7 @@ function HabitatDome({
               ))}
             </>
           )}
-          <Label position={[0, 3.0, 0]} center>
+          <Label position={[0, 4.6, 0]} center>
             <button
               className={"habitat-label " + (selected ? "selected" : "")}
               aria-pressed={selected}
@@ -707,7 +648,8 @@ function HabitatDome({
               data-prompt-count={promptCount}
               data-dome-scale={size.toFixed(3)}
               data-building-stage={features.stage}
-              data-glass-panels={features.glassPanels}
+              data-house-id={habitat.id}
+              data-chat-thread={habitat.chatThreadId || undefined}
               data-features={Object.entries(features)
                 .filter(
                   ([k, v]) =>
@@ -810,7 +752,7 @@ function ProjectDistrict({
           receiveShadow
         >
           <circleGeometry args={[depth / 2, 80]} />
-          <meshStandardMaterial color={selected ? "#b3b98d" : "#aeb38a"} />
+          <meshStandardMaterial color={selected ? "#91ad7d" : "#8eaa7d"} />
         </mesh>
         <VillageLandscape
           radius={depth / 2}
@@ -820,16 +762,25 @@ function ProjectDistrict({
             .map((h) => habitatPosition(h.plot))}
         />
         {habitats.filter(hasVillageSite).map((h) => {
-          const [x, , z] = habitatPosition(h.plot),
-            length = Math.hypot(x, z);
+          const path = villagePath(h.plot, domeScale(habitatPromptCount(h)));
+          if (!path.length) return null;
           return (
-            <group key={h.id} rotation={[0, Math.atan2(x, z), 0]}>
+            <group key={h.id} rotation={[0, path.angle, 0]}>
               <Box
-                at={[0, 0.006, length / 2]}
-                size={[0.8, 0.025, length - 3]}
-                color="#dfc8a2"
+                at={[0, 0.012, path.center]}
+                size={[1.05, 0.035, path.length]}
+                color="#d8c7a8"
                 castShadow={false}
               />
+              {[-0.57, 0.57].map((x) => (
+                <Box
+                  key={x}
+                  at={[x, 0.025, path.center]}
+                  size={[0.07, 0.06, path.length]}
+                  color="#bdac90"
+                  castShadow={false}
+                />
+              ))}
             </group>
           );
         })}
@@ -861,7 +812,7 @@ function ProjectDistrict({
           return true;
         });
         return (
-          <HabitatDome
+          <HabitatHouse
             key={h.id}
             habitat={h}
             current={currentHabitat === h.id}
@@ -993,8 +944,14 @@ function Camera({
   });
 
   useEffect(() => {
-    let target = new THREE.Vector3(farX / 2, 0, 0),
-      span = Math.max(34, farX + 35, farZ);
+    let target = new THREE.Vector3(
+        projects.length
+          ? districtPosition(projects[0].plot, villageExtent)[0]
+          : 0,
+        0,
+        -3,
+      ),
+      span = 22;
     const dome = habitats.find((h) => h.id === focusHabitat),
       project = dome
         ? projects.find((p) => p.id === dome.projectId)
@@ -1011,11 +968,11 @@ function Camera({
         ),
         depth = districtDepth(Math.max(0, ...group.map((h) => h.plot)));
       target.set(origin[0], 0, 0);
-      span = Math.max(32, depth);
+      span = Math.max(22, depth * 0.7);
     }
     camera.position
       .copy(target)
-      .add(new THREE.Vector3(span * 0.68, span * 0.82, span * 0.95));
+      .add(new THREE.Vector3(span * 0.48, span * 0.52, span * 0.85));
     controls.current?.target.copy(target);
     controls.current?.update();
   }, [focus, reset, focusHabitat, projects.length, camera]);
@@ -1142,7 +1099,7 @@ export default function City({
         projects.map((p) => (
           <section key={p.id} className="simple-district">
             <button className="simple-building" onClick={() => onSelect(p.id)}>
-              <span style={{ color: palette[p.plot % palette.length] }}>⌒</span>
+              <span style={{ color: palette[p.plot % palette.length] }}>⌂</span>
               <strong>{p.name}</strong>
               <small>
                 {
@@ -1162,7 +1119,7 @@ export default function City({
                     className="simple-habitat"
                     onClick={() => onSelectHabitat(h.id, p.id)}
                   >
-                    <strong>⌒ {h.name}</strong>
+                    <strong>⌂ {h.name}</strong>
                     <small>{h.members.length} assignments</small>
                   </button>
                 ))}
@@ -1221,17 +1178,26 @@ export default function City({
                 <Canvas
                   frameloop={simple ? "never" : "always"}
                   shadows
-                  dpr={[1, 1.5]}
+                  dpr={[1, 2]}
                   camera={{ position: [17, 19, 22], fov: 40 }}
-                  gl={{ antialias: true }}
+                  gl={{
+                    antialias: true,
+                    toneMapping: THREE.ACESFilmicToneMapping,
+                    toneMappingExposure: 1.05,
+                  }}
+                  onCreated={({ gl }) => {
+                    gl.shadowMap.type = THREE.PCFSoftShadowMap;
+                  }}
                 >
-                  <color attach="background" args={["#c4d5da"]} />
-                  <fog attach="fog" args={["#c4d5da", 170, 520]} />
-                  <ambientLight intensity={0.7} />
+                  <color attach="background" args={["#cbdce4"]} />
+                  <fog attach="fog" args={["#cbdce4", 170, 520]} />
+                  <ambientLight intensity={0.45} />
                   <hemisphereLight args={["#ffe9d2", "#a77b63", 1]} />
                   <directionalLight
                     position={[-30, 70, 25]}
-                    intensity={1.9}
+                    intensity={2.4}
+                    color="#fff0d5"
+                    shadow-radius={4}
                     castShadow
                     shadow-mapSize={[2048, 2048]}
                     shadow-bias={-0.0002}
@@ -1252,6 +1218,12 @@ export default function City({
                   />
                   <group position={[0, -0.2, 0]}>
                     <MarsTerrain projects={projects} />
+                    {projects.length === 0 && (
+                      <>
+                        <VillageLandscape radius={20} motion={motion} />
+                      </>
+                    )}
+
                     {projects.map((project) => (
                       <ProjectDistrict
                         key={project.id}

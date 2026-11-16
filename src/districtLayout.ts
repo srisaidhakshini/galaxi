@@ -9,6 +9,8 @@ export function districtPosition(
 const clearings: [number, number, number][] = [
   [7.6, 0, 4.2],
   [-5.5, 0, -8.8],
+  [-8.5, 0, 3.5],
+  [5.3, 0, -9.5],
 ];
 export function habitatPosition(plot: number): [number, number, number] {
   while (clearings.length <= plot) {
@@ -30,6 +32,18 @@ export function habitatPosition(plot: number): [number, number, number] {
     }
   }
   return [...clearings[plot]];
+}
+
+/** Leave the fountain square clear and stop the lane at the house steps. */
+export function villagePath(plot: number, houseScale: number) {
+  const [x, , z] = habitatPosition(plot);
+  const start = 5.08;
+  const end = Math.hypot(x, z) - 2.55 * houseScale;
+  return {
+    angle: Math.atan2(x, z),
+    center: (start + end) / 2,
+    length: Math.max(0, end - start),
+  };
 }
 export function districtDepth(maxHabitatPlot: number) {
   let radius = 10;

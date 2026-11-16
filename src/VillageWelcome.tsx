@@ -6,19 +6,24 @@ export function VillageWelcome() {
         ✳ galaxi<span>a little world of your own</span>
       </a>
       <div className="village-intro-copy">
-        <span className="village-kicker">MAKE ROOM FOR YOUR NEXT IDEA</span>
+        <span className="village-kicker">
+          EVERY GREAT ADVENTURE STARTS WITH AN IDEA
+        </span>
         <h2>
-          Good things
+          A world of ideas
           <br />
-          grow here<span>.</span>
+          comes to life<span>.</span>
         </h2>
-        <p>A home for your projects. A little crew to bring them to life.</p>
+        <p>
+          A wonderfully wild world for your projects. Cook up an idea and watch
+          your little crew bring it to life.
+        </p>
       </div>
       <svg
         className="village-illustration"
         viewBox="0 0 560 380"
         role="img"
-        aria-label="A friendly illustrated village with glass domes, trees, a fountain and winding paths"
+        aria-label="A candy-colored world with floating doughnuts, raining meatballs, fluffy clouds and a little project village"
       >
         <defs>
           <linearGradient id="village-glass" x2="0.8" y2="1">
@@ -32,8 +37,8 @@ export function VillageWelcome() {
               strokeWidth="5"
               strokeLinecap="round"
             />
-            <ellipse cy="-6" rx="15" ry="20" fill="#8fae8b" />
-            <ellipse cx="-5" cy="-12" rx="10" ry="14" fill="#b6cda3" />
+            <ellipse cy="-6" rx="15" ry="20" fill="#f3a5ce" />
+            <ellipse cx="-5" cy="-12" rx="10" ry="14" fill="#ffd0e4" />
           </g>
           <g id="welcome-dome">
             <ellipse cy="7" rx="55" ry="16" fill="#b6a788" opacity=".23" />
@@ -69,6 +74,49 @@ export function VillageWelcome() {
             <circle cx="4" cy="-3" r="1.5" fill="#f7d597" />
           </g>
         </defs>
+        <g
+          className="welcome-food welcome-donut"
+          transform="translate(155 75) rotate(-20)"
+        >
+          <circle r="29" fill="#df934a" />
+          <circle r="24" fill="#ff83b5" />
+          <circle r="10" fill="#bcebf0" />
+          <path
+            d="M-18-10l5 3m23-10 3 6m-3 29 6-3m-30 3 5-4"
+            stroke="#fff1a0"
+            strokeWidth="4"
+            strokeLinecap="round"
+          />
+        </g>
+        <g
+          className="welcome-food welcome-burger"
+          transform="translate(360 103) rotate(12)"
+        >
+          <path d="M-30 0a30 27 0 0 1 60 0" fill="#ffc064" />
+          <path
+            d="M-29 4h58"
+            stroke="#83c958"
+            strokeWidth="8"
+            strokeLinecap="round"
+          />
+          <path
+            d="M-27 13h54"
+            stroke="#924b34"
+            strokeWidth="10"
+            strokeLinecap="round"
+          />
+          <path
+            d="M-26 22h52"
+            stroke="#ffc064"
+            strokeWidth="10"
+            strokeLinecap="round"
+          />
+        </g>
+        <g className="welcome-food welcome-meatballs" fill="#b96840">
+          <circle cx="255" cy="55" r="12" />
+          <circle cx="470" cy="140" r="15" />
+          <circle cx="66" cy="155" r="9" />
+        </g>
         <circle cx="431" cy="64" r="29" fill="#f2d697" />
         <path d="M65 98q9-19 23-8 20-22 35 5 22-4 24 10H65Z" fill="#fffdf4" />
         <path d="M324 32q9-14 19-6 14-16 28 4 14-2 15 8h-62Z" fill="#fffdf4" />
@@ -82,7 +130,7 @@ export function VillageWelcome() {
         />
         <path
           d="M64 242C41 186 131 143 230 144c111-31 245 22 260 82 38 79-100 115-204 113C161 353 74 306 64 242Z"
-          fill="#d5dfbd"
+          fill="#a4dfbe"
         />
         <path
           d="M153 213q58 63 124 43t114-34M279 256l31 63"
@@ -149,7 +197,7 @@ export function VillageWelcome() {
         </g>
         <path
           d="m91 139 4-9 4 9 9 4-9 4-4 9-4-9-9-4Zm361-16 3-6 3 6 6 3-6 3-3 6-3-6-6-3Z"
-          fill="#b7c7a5"
+          fill="#ffb95d"
         />
       </svg>
       <div className="village-intro-note">
