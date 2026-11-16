@@ -4,7 +4,7 @@
 
 ### A little world for your big ideas.
 
-A playful 3D village for your Codex projects, with soft colours, glass domes, winding paths and a busy little crew. Watch recorded coding activity become construction, or send prompts from the website to your own local companion.
+A playful 3D village for your Codex projects. Each chat has its own detailed cottage, with tiled roofs, planted window boxes and paths leading to a shared fountain square. Follow recorded coding activity, inspect changes and checks, or send separate tasks to your own local companion.
 
 **[Open Galaxi](https://galaxi.dhakshini.studio)** · **[Download for Windows](https://github.com/srisaidhakshini/galaxi-companion/releases/latest/download/Galaxi-Setup.exe)** · **[Quick start](#quick-start)** · **[Run from source](#run-from-source)**
 
@@ -12,22 +12,44 @@ React · TypeScript · Three.js · Express · SQLite
 
 </div>
 
-![Galaxi desktop interface showing a circular village with three glass domes, a central fountain, paths, trees, and project navigation](docs/images/village-overview.png)
+![Galaxi village with four chat houses around a sandstone fountain square, connected paths, trees and project navigation](docs/images/village-overview.png)
 
-_The current website theme, shown with sample project data._
+_The current source build, shown with sample projects and conversations. Screenshots do not contain private chat data._
 
-## A habitat for every idea
+## One chat, one house
 
-| Feature                  | What it does                                                                                                                                                       |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **One chat, one dome**   | Each Codex chat gets a persistent home in its project's village. Later prompts continue the same building.                                                         |
-| **Build piece by piece** | Foundations, frames, glass panels, doors, windows, and furniture appear as prompt milestones and recorded construction stages advance. Growth has a cap.           |
-| **A working village**    | Workers walk, collect materials, carry, place, and hammer to illustrate observed activity. Trees, streetlights, paths, and a fountain bring the village together.  |
-| **Watch existing chats** | Keep prompting in Codex. Galaxi reads recorded activity without submitting another task or taking over approvals.                                                  |
-| **Run separate tasks**   | An optional local runner coordinates a lead and isolated implementation workers, checks their results, and leaves application to you.                              |
-| **Connect a browser**    | Approve the hosted website in the local companion. View-only is the default; optionally enable prompts that run on your computer. Access expires and is revocable. |
+| Feature                  | What it does                                                                                                                                                                 |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **A home for each chat** | Each Codex chat gets one persistent house on its own plot. Select the house or its name to open that chat's panel. Later prompts keep the same home.                         |
+| **Homes that grow**      | House size grows with recorded prompt count, up to 20 prompts. Tiled roofs, shutters, window boxes and stone steps give each home detail.                                    |
+| **A working village**    | Workers walk, collect materials, carry, place and hammer to illustrate observed activity. A paved fountain square, benches, planted beds and clear paths connect the houses. |
+| **Watch existing chats** | Keep prompting in Codex. Galaxi reads recorded activity without submitting another task or taking over approvals.                                                            |
+| **Run separate tasks**   | An optional local runner coordinates a lead and isolated implementation workers, checks their results, and leaves application to you.                                        |
+| **Connect a browser**    | Approve the hosted website in the local companion. View-only is the default; optionally enable prompts that run on your computer. Access expires and is revocable.           |
 
 > Construction is a visual interpretation of recorded activity, not a measured percentage of code completion. Watching a chat does not claim that Galaxi ran verification or award verified-task upgrades.
+
+## Follow the work inside each house
+
+Select a house to inspect its chat. Panels stay scoped to the selected house; a disconnected chat does not silently show another conversation.
+
+| Panel        | What you see                                                                                                                                      |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Chat**     | Recent public messages. New messages stay in view when you are at the bottom; scrolling up keeps your reading position.                           |
+| **Activity** | Recorded messages, commands, file edits, plans and supported tool calls for the latest or selected turn.                                          |
+| **Changes**  | Recorded file patches and file-writing commands. Shell-based edits may have command output without a patch.                                       |
+| **Checks**   | Recorded verification commands, their output and reported exit codes when available. A completed command alone does not verify the whole project. |
+| **History**  | The 20 most recent recorded turns. Open an earlier request to inspect its messages, changes and checks, then return to **Latest turn (live)**.    |
+
+<p align="center">
+  <a href="docs/images/chat-panel.png"><img src="docs/images/chat-panel.png" alt="Chat panel showing the selected house's conversation, recent public messages and live update status" width="31%" /></a>
+  <a href="docs/images/checks-panel.png"><img src="docs/images/checks-panel.png" alt="Checks panel showing a recorded production build command, exit code and expandable output" width="31%" /></a>
+  <a href="docs/images/history-panel.png"><img src="docs/images/history-panel.png" alt="History panel listing three recorded requests for the same chat house" width="31%" /></a>
+</p>
+
+_Conversation, checks and history panels, illustrated with sample data. Select an image to view it at full size._
+
+The **Live mirror** indicator shows when the companion last checked the chat. Delayed updates and disconnected sources are labelled, and **Refresh** requests a fresh snapshot. The observer reads recorded activity every two seconds; the browser also polls every five seconds as a fallback to live update notifications. Recorded activity can still lag the Codex desktop.
 
 ## Windows companion
 
@@ -37,7 +59,7 @@ The Windows x64 companion bundles Node.js, npm and Codex. It adds browser-based 
 
 This initial Windows x64 installer is unsigned. See [companion setup and packaging](docs/COMPANION.md) for installation, requirements and verification instructions.
 
-The website screenshots show the new village theme. The published **0.2.0 desktop installer** retains its earlier appearance; it works with the updated website and the same connection permissions.
+The screenshots show this repository's current source build. The published **0.2.0 desktop installer** retains its earlier appearance; it works with the website and the same connection permissions.
 
 ## Quick start
 
@@ -106,7 +128,7 @@ No manual code copying is needed for this flow. **Manual connection with a code*
 Prompt-enabled browsers can submit, steer and stop tasks in already-registered projects. Repository setup, runtime approvals and applying results stay in the local app. No developer-funded cloud AI service is used; work runs on the user's computer under their own Codex access and limits.
 
 <p align="center">
-  <img src="docs/images/connection-setup.png" alt="Galaxi’s playful village welcome page with an illustrated garden and companion connection options" width="980" />
+  <img src="docs/images/connection-setup.png" alt="Galaxi welcome page with a village illustration and options for connecting the local companion" width="980" />
 </p>
 
 See [pairing and troubleshooting](docs/PAIRING.md) for browser permissions and [deployment details](docs/DEPLOYMENT.md) for the static hosting boundary. Vercel hosts the frontend; it does not run the local companion.
@@ -137,14 +159,16 @@ Results live under `.local/workspaces/<task-id>/integration`, with worker worktr
 
 ## Structure
 
-- `src/City.tsx`: procedural city, five building levels, scene workers, camera and rendering fallback.
+- `src/City.tsx`, `src/VillageCraft.tsx`, `src/Scenery.tsx`: chat houses, village layout, detailed cottages, fountain square, scene workers, camera and rendering fallback.
 - `src/main.tsx`, `src/style.css`: project console, forms, approvals, replay and responsive layout.
-- `src/village-theme.css`, `src/VillageWelcome.tsx`: shared village palette, rounded interface and offline welcome illustration.
+- `src/village-theme.css`, `src/food-weather.css`, `src/VillageWelcome.tsx`: village styling, sea-glass and terracotta palette, responsive panels and offline welcome illustration.
+- `src/WatchedChat.tsx`, `shared/observedViews.ts`: live chat panels, turn selection, recorded checks and file-change filtering.
 - `shared/domain.ts`: renderer-independent entities, lifecycle, dependency validation and completion predicate.
 - `server/codex.ts`: stdio App Server JSON-RPC adapter.
 - `server/controller.ts`: planning, bounded scheduling, integration, checks and request routing.
 - `server/git.ts`: repository validation, worktrees, commits and command execution.
 - `server/store.ts`: SQLite snapshots, journal and transactional progression.
+- `server/observer.ts`: read-only chat discovery, independent polling per chat, recent turn history and archived-turn inspection.
 - `server/index.ts`: loopback API, SSE invalidations and Vite/static hosting.
 - `server/pairing.ts`, `shared/companionPermissions.ts`: local sessions, origin-bound grants, prompt permissions and revocation.
 - `src/CompanionPanel.tsx`, `src/companionClient.ts`, `src/connectionHandoff.ts`: connection setup, authenticated transport and one-time callback validation.
@@ -164,6 +188,16 @@ The isolated pairing browser check requires Microsoft Edge and uses sample data 
 ```powershell
 npm run test:pairing
 ```
+
+To check the interface and live panels, start Galaxi in another terminal, then run:
+
+```powershell
+$env:CITY_QA_ORIGIN = "http://127.0.0.1:4310"
+npm run test:ui
+npm run test:live-panels
+```
+
+These checks require Microsoft Edge and use browser-only sample data. They cover dynamic updates in Chat, Activity, Changes, Checks and History, house selection, archived turns, connection status, conversation scrolling and responsive layout. They do not start agents or write sample data into your projects. Set `CITY_QA_ORIGIN` to the running companion's address if you use another port.
 
 Optional checks against the real Codex runtime:
 
@@ -189,7 +223,9 @@ Automatic resume after controller restart, MCP elicitation forms, attachment upl
 
 The packaged-app and browser tests use isolated sample data. Real sign-in, live coding and clean-machine installer execution are not covered by those automated checks. See [verification and limitations](docs/VERIFICATION.md) for the evidence and scope.
 
-Registered project chats are discovered automatically every 30 seconds, within the eight-chat observation limit. Each chat gets its own dome; selecting it shows that chat's recorded activity. Stop watching is remembered so discovery does not reconnect a chat you stopped. Discovery only reads history and never starts or resumes agents.
+Registered project chats are discovered automatically every 30 seconds, within the eight-chat observation limit. Each chat gets its own house; selecting it shows that chat's recorded activity. Stop watching is remembered so discovery does not reconnect a chat you stopped. Discovery only reads history and never starts or resumes agents.
+
+The observer keeps the 20 most recent turn summaries and retrieves the latest 100 recorded items for an inspected turn. Longer turns show a truncation notice; older items and full conversation history remain in Codex. Recorded command output and patches are capped at 16,000 characters. Private reasoning is not copied into the village.
 
 ## Documentation
 
