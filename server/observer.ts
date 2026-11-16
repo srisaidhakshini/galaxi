@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { resolve } from "node:path";
-import type { ObservedChat, Worker } from "../shared/domain.ts";
+import type { ObservedChat, ObservedTurn, Worker } from "../shared/domain.ts";
 import type { Store } from "./store.ts";
 import { repository } from "./git.ts";
 import { assignChatHabitat } from "../shared/habitats.ts";
+import { isCheckCommand, isWriteCommand } from "../shared/observedViews.ts";
 
 export interface Reader {
   ready: boolean;
@@ -35,6 +36,15 @@ export function describeRecordedItem(
     };
   if (item.type === "agentMessage")
     return { id: item.id, kind: item.type, message: item.text || "" };
+  if (item.type === "plan")
+    return { id: item.id, kind: item.type, message: item.text || "" };
+  if (item.type === "mcpToolCall" || item.type === "dynamicToolCall")
+    return {
+      id: item.id,
+      kind: item.type,
+      message: `${item.server || item.namespace || "Tool"} · ${item.tool}`,
+      status: item.status,
+    };
   if (item.type === "fileChange")
     return {
       id: item.id,
@@ -53,6 +63,7 @@ export function describeRecordedItem(
       message: item.command || "",
       status: item.status,
       output: item.aggregatedOutput?.slice(-16000),
+      exitCode: item.exitCode ?? undefined,
     };
   if (item.type === "collabAgentToolCall")
     return {
@@ -66,30 +77,26 @@ export function describeRecordedItem(
 export function recordedState(
   item: ObservedChat["activity"][number],
 ): Worker["status"] {
-  if (item.status === "failed" || item.status === "declined") return "failed";
+  if (
+    item.status === "failed" ||
+    item.status === "declined" ||
+    (item.exitCode !== undefined && item.exitCode !== 0)
+  )
+    return "failed";
   if (item.kind === "fileChange") return "editing";
   if (item.kind === "commandExecution") {
-    if (
-      /\b(apply_patch|Set-Content|Add-Content|Out-File|writeFile(?:Sync)?|write_text)\b/i.test(
-        item.message,
-      )
-    )
-      return "editing";
-    if (
-      /\b(npm (?:run (?:test|build|lint|typecheck)|test)|pytest|cargo test|tsc|vitest)\b/i.test(
-        item.message,
-      )
-    )
-      return "checking";
+    if (isWriteCommand(item.message)) return "editing";
+    if (isCheckCommand(item.message)) return "checking";
     return "running commands";
   }
   return "inspecting";
 }
 export class ChatObserver {
   timer?: NodeJS.Timeout;
-  polling = false;
   fingerprints = new Map<string, string>();
   lastDiscovery = 0;
+  chatPolls = new Map<string, Promise<void>>();
+  discovery?: Promise<void>;
   constructor(
     public store: Store,
     public reader: Reader,
@@ -209,7 +216,10 @@ export class ChatObserver {
         const known = this.store.state.observedChats!.find(
           (c) => c.threadId === candidate.id,
         );
-        if (known) known.sourceUpdatedAt = candidate.updatedAt;
+        if (known) {
+          known.sourceUpdatedAt = candidate.updatedAt;
+          known.name = candidate.name;
+        }
         if (
           this.store.state.observedChats!.some(
             (c) => c.threadId === candidate.id,
@@ -241,35 +251,111 @@ export class ChatObserver {
     }
   }
   async poll() {
-    if (this.polling || !this.reader.ready) return;
-    this.polling = true;
-    try {
-      if (Date.now() - this.lastDiscovery >= 30000) {
-        this.lastDiscovery = Date.now();
-        await this.discover();
+    if (!this.reader.ready) {
+      for (const c of this.store.state.observedChats!) {
+        c.connected = false;
+        c.error = "Codex connection unavailable. Reconnecting…";
+        c.worker.status = "blocked";
       }
-      for (const c of [...this.store.state.observedChats!])
-        await this.pollChat(c);
       if (this.store.state.observedChats!.length) this.publish();
-    } finally {
-      this.polling = false;
+      return;
     }
+    if (Date.now() - this.lastDiscovery >= 30000 && !this.discovery) {
+      this.lastDiscovery = Date.now();
+      this.discovery = this.discover().finally(() => {
+        this.discovery = undefined;
+        this.publish();
+      });
+    }
+    // A slow chat must not prevent the other houses from receiving updates.
+    await Promise.allSettled(
+      this.store.state.observedChats!.map(async (c) => {
+        if (this.chatPolls.has(c.threadId)) return;
+        await this.pollChat(c);
+        this.publish();
+      }),
+    );
   }
-  async pollChat(chat: ObservedChat, initial = false) {
+  pollChat(chat: ObservedChat, initial = false): Promise<void> {
+    const pending = this.chatPolls.get(chat.threadId);
+    if (pending) return pending;
+    const job = this.readChat(chat, initial).finally(() =>
+      this.chatPolls.delete(chat.threadId),
+    );
+    this.chatPolls.set(chat.threadId, job);
+    return job;
+  }
+  async readTurn(threadId: string, turnId: string) {
+    if (!this.store.state.observedChats!.some((c) => c.threadId === threadId))
+      throw Error("This chat is not being watched.");
+    const result = await this.reader.call("thread/items/list", {
+      threadId,
+      turnId,
+      limit: 100,
+      sortDirection: "desc",
+    });
+    return {
+      turnId,
+      activity: result.data
+        .map((e: any) => describeRecordedItem(e.item))
+        .filter(Boolean)
+        .reverse(),
+      truncated: !!result.nextCursor,
+    };
+  }
+  private async readChat(chat: ObservedChat, initial = false) {
+    const wasConnected = chat.connected;
     try {
       const turns = await this.reader.call("thread/turns/list", {
         threadId: chat.threadId,
-        limit: 1,
+        limit: 20,
         sortDirection: "desc",
-        itemsView: "notLoaded",
+        itemsView: "summary",
       });
       const turn = turns.data[0];
       if (!turn) {
         chat.habitatHistoryLoaded = true;
         chat.connected = true;
         chat.worker.status = "idle";
+        chat.checkedAt = new Date().toISOString();
+        chat.error = undefined;
+        chat.prompt = "";
+        chat.turnId = undefined;
+        chat.activity = [];
+        chat.history = [];
+        chat.historyHasMore = false;
+        chat.activityTruncated = false;
         return;
       }
+      chat.historyHasMore = !!turns.nextCursor;
+      chat.history = turns.data.map((t: any): ObservedTurn => {
+        const messages = (t.items || [])
+          .map(describeRecordedItem)
+          .filter(
+            (a: ObservedChat["activity"][number] | undefined) =>
+              a && ["userMessage", "agentMessage"].includes(a.kind),
+          );
+        const member = this.store.state.habitats
+          ?.flatMap((h) => h.members)
+          .find((m) => m.threadId === chat.threadId && m.turnId === t.id);
+        return {
+          id: t.id,
+          status: t.status,
+          prompt:
+            messages.find(
+              (a: ObservedChat["activity"][number]) => a.kind === "userMessage",
+            )?.message ||
+            member?.prompt ||
+            (t.id === chat.turnId ? chat.prompt : ""),
+          startedAt: t.startedAt
+            ? new Date(t.startedAt * 1000).toISOString()
+            : undefined,
+          completedAt: t.completedAt
+            ? new Date(t.completedAt * 1000).toISOString()
+            : undefined,
+          messages,
+        };
+      });
       // Establish a baseline without turning older history into new buildings.
       const newPrompt = !!chat.habitatHistoryLoaded && chat.turnId !== turn.id;
       chat.habitatHistoryLoaded = true;
@@ -336,8 +422,11 @@ export class ChatObserver {
       this.fingerprints.set(chat.threadId, fingerprint);
       chat.connected = true;
       chat.error = undefined;
+      if (!wasConnected && chat.worker.status === "blocked")
+        chat.worker.status = "idle";
       chat.checkedAt = new Date().toISOString();
       chat.activity = activity;
+      chat.activityTruncated = !!items.nextCursor;
       const user = activity.find((a) => a.kind === "userMessage");
       if (user) chat.prompt = user.message;
       if (changed) {

@@ -197,6 +197,7 @@ function App() {
   const resize = useRef<{ x: number; width: number } | undefined>(undefined);
   const cursor = useRef(0);
   const refreshing = useRef(false);
+  const refreshQueued = useRef(false);
   const networkError = useRef("");
   useEffect(() => {
     if (
@@ -214,7 +215,10 @@ function App() {
     setReset((n) => n + 1);
   }, [state?.habitats, selected, selectedHabitat]);
   async function refresh() {
-    if (refreshing.current) return;
+    if (refreshing.current) {
+      refreshQueued.current = true;
+      return;
+    }
     refreshing.current = true;
     const identity = companion.token;
     try {
@@ -250,6 +254,10 @@ function App() {
       setError(networkError.current);
     } finally {
       refreshing.current = false;
+      if (refreshQueued.current) {
+        refreshQueued.current = false;
+        if (companion.token === identity) void refresh();
+      }
     }
   }
   useEffect(() => {
@@ -349,16 +357,25 @@ function App() {
     tasks = state?.tasks || [],
     project = projects.find((p) => p.id === selected),
     projectTasks = tasks.filter((t) => t.projectId === selected);
-  const task = projectTasks.find((t) => t.id === taskId) || projectTasks.at(-1);
   const projectHabitats =
     state?.habitats?.filter((h) => h.projectId === selected) || [];
+  const selectedHouse = projectHabitats.find((h) => h.id === selectedHabitat);
+  const houseTasks = selectedHabitat
+    ? projectTasks.filter((t) => t.habitatId === selectedHabitat)
+    : projectTasks;
+  const task = houseTasks.find((t) => t.id === taskId) || houseTasks.at(-1);
   const projectChats =
     state?.observedChats?.filter((c) => c.projectId === selected) || [];
-  const observed =
-    projectChats.find((c) => c.habitatId === selectedHabitat) ||
-    currentObservedChat(projectChats);
-  const watching = !!observed && !cityExecution;
-  const active = projectTasks.find((t) => !terminal(t.status));
+  const observed = selectedHabitat
+    ? projectChats.find(
+        (c) =>
+          c.habitatId === selectedHabitat ||
+          c.threadId === selectedHouse?.chatThreadId,
+      )
+    : currentObservedChat(projectChats);
+  const watching =
+    (!!observed || !!selectedHouse?.chatThreadId) && !cityExecution;
+  const active = houseTasks.find((t) => !terminal(t.status));
   const events = (state?.events || []).filter((e) => e.taskId === task?.id);
   const requests = state?.requests.filter((r) => r.taskId === task?.id) || [];
   async function send(path: string, body: unknown) {
@@ -398,7 +415,7 @@ function App() {
     setSelectedHabitat(id);
     setHabitatPreference(id);
     setFocusHabitat(id);
-    setTab("Habitats");
+    setTab("Chat");
   }
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -1077,6 +1094,7 @@ function App() {
                   >
                     {t}
                     {t === "Checks" &&
+                    !watching &&
                     task?.checks.some((c) => c.status === "failed")
                       ? " !"
                       : ""}
@@ -1106,7 +1124,35 @@ function App() {
                   />
                 )}
                 {watching && observed && tab !== "Habitats" && (
-                  <WatchedChat chat={observed} tab={tab} />
+                  <WatchedChat
+                    key={observed.threadId}
+                    chat={observed}
+                    tab={tab}
+                    load={api}
+                    onTabChange={setTab}
+                    onRefresh={refresh}
+                  />
+                )}
+                {watching && !observed && tab !== "Habitats" && (
+                  <div className="panel-empty">
+                    <h3>This house’s chat is not connected</h3>
+                    <p>
+                      Resume watching this chat to see its messages, activity,
+                      changes and checks.
+                    </p>
+                    <button
+                      className="primary"
+                      disabled={readOnly}
+                      onClick={() =>
+                        void send("/watch", {
+                          threadId: selectedHouse?.chatThreadId,
+                          projectId: selected,
+                        })
+                      }
+                    >
+                      Watch this chat
+                    </button>
+                  </div>
                 )}
                 {!readOnly &&
                   requests.map((r) => (
@@ -1309,8 +1355,8 @@ function App() {
                 )}
                 {!watching && tab === "History" && (
                   <>
-                    {projectTasks.length ? (
-                      projectTasks.toReversed().map((t) => (
+                    {houseTasks.length ? (
+                      houseTasks.toReversed().map((t) => (
                         <button
                           className="history-item"
                           key={t.id}
@@ -1353,21 +1399,23 @@ function App() {
                     {new Date(connection.expiresAt).toLocaleTimeString()}
                   </small>
                 </div>
-              ) : watching && observed ? (
+              ) : watching ? (
                 <div className="watch-footer">
                   <strong>Keep prompting in Codex.</strong>
                   <p>
                     This city watches that chat; it does not queue another
                     coding task.
                   </p>
-                  <button
-                    className="text-button"
-                    onClick={() =>
-                      void send(`/watch/${observed.threadId}/stop`, {})
-                    }
-                  >
-                    Stop watching
-                  </button>
+                  {observed && (
+                    <button
+                      className="text-button"
+                      onClick={() =>
+                        void send(`/watch/${observed.threadId}/stop`, {})
+                      }
+                    >
+                      Stop watching
+                    </button>
+                  )}
                 </div>
               ) : (
                 <form className="composer" onSubmit={submit}>

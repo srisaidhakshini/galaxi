@@ -112,6 +112,12 @@ app.post(
   "/api/watch/:id/stop",
   route(async (req) => observer.unwatch(String(req.params.id))),
 );
+app.get(
+  "/api/watch/:id/turns/:turnId",
+  route(async (req) =>
+    observer.readTurn(String(req.params.id), String(req.params.turnId)),
+  ),
+);
 app.post(
   "/api/projects",
   route(async (req) => {

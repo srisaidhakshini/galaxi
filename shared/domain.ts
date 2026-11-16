@@ -37,6 +37,9 @@ export interface Worker {
   observedItemId?: string;
 }
 export interface ObservedChat {
+  history?: ObservedTurn[];
+  historyHasMore?: boolean;
+  activityTruncated?: boolean;
   sourceUpdatedAt?: number;
   threadId: string;
   turnId?: string;
@@ -57,7 +60,16 @@ export interface ObservedChat {
     message: string;
     status?: string;
     output?: string;
+    exitCode?: number;
   }[];
+}
+export interface ObservedTurn {
+  id: string;
+  status: string;
+  prompt: string;
+  startedAt?: string;
+  completedAt?: string;
+  messages: ObservedChat["activity"];
 }
 export interface Check {
   command: string;
