@@ -18,6 +18,7 @@
     "test:visual": "tsx scripts/city-visual-qa.ts",
     "test:watch": "tsx --env-file-if-exists=.env scripts/mirror-browser.ts",
     "test:ui": "tsx scripts/ui-qa.ts",
+    "test:live-panels": "tsx scripts/live-panels-qa.ts",
     "test:outpost": "tsx scripts/outpost-qa.ts",
     "test:pairing": "npm run build && tsx scripts/pairing-browser-qa.ts",
     "desktop:prepare": "npm run build && node scripts/build-desktop.mjs",

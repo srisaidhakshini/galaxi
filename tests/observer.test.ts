@@ -22,7 +22,7 @@ class ReadOnlyRuntime {
       content: [{ type: "text", text: "Build the requested feature" }],
     },
   ];
-  async call(method: string, params: any) {
+  async call(method: string, params: any): Promise<any> {
     this.calls.push(method);
     if (
       ![
@@ -148,6 +148,7 @@ test("recorded completion never awards progression or claims Galaxi verification
 test("read failure disconnects the mirror instead of inventing activity", async () => {
   const { store, runtime, observer } = fixture();
   const c = await observer.watch("chat", "p");
+  const original = runtime.call.bind(runtime);
   runtime.call = async () => {
     throw Error("history unavailable");
   };
@@ -155,6 +156,11 @@ test("read failure disconnects the mirror instead of inventing activity", async 
   assert.equal(c.connected, false);
   assert.equal(c.worker.status, "blocked");
   assert.match(c.error!, /unavailable/);
+  runtime.call = original;
+  await observer.poll();
+  assert.equal(c.connected, true);
+  assert.equal(c.error, undefined);
+  assert.equal(c.worker.status, "idle");
   store.db.close();
 });
 test("public item classification separates writes, checks and ordinary commands", () => {
@@ -298,5 +304,116 @@ test("project discovery attaches both chats with one dome each and respects stop
   assert.ok(
     runtime.calls.every((m) => !m.includes("start") && !m.includes("resume")),
   );
+  store.db.close();
+});
+
+test("history lists real turns and inspecting an older turn never replaces live activity", async () => {
+  const { store, runtime, observer } = fixture();
+  const original = runtime.call.bind(runtime);
+  runtime.call = async (method, params) => {
+    if (method === "thread/turns/list")
+      return {
+        data: [
+          {
+            id: "turn",
+            status: "inProgress",
+            startedAt: 1700000100,
+            items: runtime.items,
+          },
+          {
+            id: "older",
+            status: "completed",
+            startedAt: 1700000000,
+            items: [
+              {
+                id: "old-user",
+                type: "userMessage",
+                content: [{ type: "text", text: "Earlier request" }],
+              },
+              { id: "secret", type: "reasoning", content: ["private"] },
+              {
+                id: "old-answer",
+                type: "agentMessage",
+                text: "Earlier answer",
+              },
+            ],
+          },
+        ],
+        nextCursor: "older-turns",
+      };
+    if (method === "thread/items/list" && params.turnId === "older")
+      return {
+        data: [
+          {
+            item: {
+              id: "old-check",
+              type: "commandExecution",
+              command: "npm test",
+              status: "completed",
+              exitCode: 1,
+              aggregatedOutput: "One test failed",
+            },
+          },
+          { item: { id: "secret", type: "reasoning", content: ["private"] } },
+        ],
+      };
+    return original(method, params);
+  };
+  const chat = await observer.watch("chat", "p");
+  assert.equal(chat.history?.length, 2);
+  assert.equal(chat.history?.[1].prompt, "Earlier request");
+  assert.equal(chat.history?.[1].messages.length, 2);
+  assert.equal(chat.historyHasMore, true);
+  const live = structuredClone(chat.activity);
+  const older = await observer.readTurn("chat", "older");
+  assert.equal(older.activity.length, 1);
+  assert.equal(older.activity[0].exitCode, 1);
+  assert.deepEqual(chat.activity, live);
+  assert.equal(chat.turnId, "turn");
+  await assert.rejects(
+    observer.readTurn("unknown", "older"),
+    /not being watched/,
+  );
+  store.db.close();
+});
+
+test("one stalled chat does not block another chat's next update", async () => {
+  const { store, runtime, observer } = fixture();
+  const first = await observer.watch("chat", "p");
+  const second = await observer.watch("second", "p");
+  observer.lastDiscovery = Date.now();
+  let release!: () => void;
+  const stalled = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const original = runtime.call.bind(runtime);
+  runtime.call = async (method, params) => {
+    if (params.threadId === first.threadId) await stalled;
+    return original(method, params);
+  };
+  runtime.items.push({
+    id: "edit-new",
+    type: "fileChange",
+    status: "completed",
+    changes: [{ path: "new.ts", diff: "+ new" }],
+  });
+  const pending = observer.poll();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.ok(second.activity.some((a) => a.id === "edit-new"));
+  runtime.items.push({
+    id: "check-new",
+    type: "commandExecution",
+    command: "npm test",
+    status: "completed",
+    exitCode: 0,
+  });
+  await observer.poll();
+  assert.ok(second.activity.some((a) => a.id === "check-new"));
+  release();
+  await pending;
+  runtime.ready = false;
+  await observer.poll();
+  assert.equal(first.connected, false);
+  assert.equal(second.connected, false);
   store.db.close();
 });

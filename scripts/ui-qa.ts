@@ -72,16 +72,16 @@ const errors: string[] = [];
 page.on("pageerror", (e) => errors.push(e.message));
 try {
   await page.route("**/api/state*", (r) => r.fulfill({ json: snapshot }));
-  await page.goto("http://127.0.0.1:4310");
+  await page.goto(process.env.CITY_QA_ORIGIN || "http://127.0.0.1:4310");
   await expect(page.locator(".watch-linkbar")).toBeVisible();
   await page.locator(".watch-linkbar").click();
   await expect(page.locator(".watch-summary")).toBeVisible();
-  await expect(page.locator(".watched-prompt")).toContainText(
+  await expect(page.locator(".observed-item.userMessage")).toContainText(
     "Improve the project dashboard",
   );
   expect(
     await page
-      .locator(".watched-prompt p")
+      .locator(".observed-item.userMessage p")
       .evaluate((e) => parseFloat(getComputedStyle(e).fontSize)),
   ).toBeGreaterThanOrEqual(12);
   await page.screenshot({
